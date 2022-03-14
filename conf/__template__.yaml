@@ -2,7 +2,7 @@
 #  Configuration file for node2vec project parameters
 
 data:
-  version: "4.4.207"
+  version: 4.4.207
   current: default
   experiments:
     default:

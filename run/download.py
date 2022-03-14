@@ -46,6 +46,8 @@ PROCESSED_DIR = 'data/processed'
 
 BIOGRID_V = '4.4.207'
 
+MSIG_FILENAME = "gene_set.entrez.gmt"
+
 if __name__ == "__main__":
 
     working_dir = os.getcwd()
@@ -141,7 +143,7 @@ if __name__ == "__main__":
     # 4. Fetch MSig Enrichment data
     auth = "http://www.gsea-msigdb.org/gsea/j_spring_security_check"
     url = "http://www.gsea-msigdb.org/gsea/msigdb/download_file.jsp?filePath=/msigdb/release/7.5.1/h.all.v7.5.1.entrez.gmt"
-    msig_filepath = os.path.join(working_dir, RAW_DIR, "gene_set.entrez.gmt")
+    msig_filepath = os.path.join(working_dir, RAW_DIR, MSIG_FILENAME)
 
     msig_exists = os.path.exists(msig_filepath)
 
