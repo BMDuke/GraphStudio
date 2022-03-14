@@ -1,0 +1,13 @@
+# Testing
+
+
+# Set up
+python -m run.config new default
+python -m run.config use default 
+
+# Pass
+python -m run.config new test p=.1 q=.9
+python -m run.config current
+
+# Fail
+python -m run.config new experiment binaryClassifier test encoder=test epochs=100 

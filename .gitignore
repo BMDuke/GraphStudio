@@ -1,0 +1,13 @@
+# All project packages
+.env/
+
+# All pycache files
+*__pycache__*
+
+# All Downloaded and transformed data
+data/raw/*.txt
+data/raw/*.gmt
+
+# All configuration files except templates
+conf/*
+!conf/__*__.yaml

@@ -1,0 +1,41 @@
+---
+#  Configuration file for node2vec project parameters
+
+data:
+  version: "4.4.207"
+  p: .5
+  q: .7
+  walk_length: 80
+  num_walks: 10
+  window_size: 2
+  negative_samples: 5
+
+
+node2vec: 
+  current: defualt
+  experiments:
+    default: 
+      embedding_dim: 128
+      epochs: 20
+
+
+multiLabelClassifier:
+  current: default
+  experiments:
+    default:
+      encoder: default
+      model: null
+      epochs: 20
+      split: .8
+
+
+binaryClassifier:
+  current: default
+  experiments:
+    default:
+      encoder: default
+      model: null
+      epochs: 20
+      split: .8
+
+...
