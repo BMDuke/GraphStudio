@@ -36,6 +36,11 @@ class Config(object):
     def new(self, name, *params):
         '''
         Create new config
+        
+        UPDATE: 
+         - *params now only expects to be the biogrid dataset
+            version because the data category now handles experiments
+            like the models
         '''
 
         # Create file path

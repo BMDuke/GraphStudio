@@ -99,7 +99,7 @@ class TestConfig(unittest.TestCase):
 
         # Config file creation
         config.new(name1)
-        config.new(name2, *['p=0.1', 'q=0.9']) # sys.argv data
+        config.new(name2, *['version=1.1.100']) # sys.argv data
 
         # Read in configs
         fp1 = os.path.join(self.fp, f"{name1}.yaml")
@@ -125,8 +125,7 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(conf1, temp) # new config == template
         self.assertNotEqual(conf2, temp) # new config + params != template
         self.assertTrue(curr["current"] == name2) # current == newest config
-        self.assertEqual(conf2['data']['p'], 0.1) # parameters set
-        self.assertEqual(conf2['data']['q'], 0.9) # parameters set
+        self.assertEqual(conf2['data']['version'], "1.1.100") # parameters set
         with self.assertRaises(NameError): # File already exists
             config.new(name1)
 
@@ -145,17 +144,22 @@ class TestConfig(unittest.TestCase):
         '''
 
         # Set up variables
+        data = 'data'
         bc = 'binaryClassifier'
         mlc = 'multiLabelClassifier'
         n2v = 'node2vec'
         name = 'test_experiment'
         values = {
+            'p': 0.1,
+            'q': 0.1,
             'epochs': 1000,
             'encoder': 'tester',
             'split': 0.999,
             'embedding_dim': 2000,
         }
+
         # Mock commandline input
+        inp_data = f"p={values['p']} q={values['q']}".split(' ')
         inp_n2v = f"embedding_dim={values['embedding_dim']} epochs={values['epochs']}".split(' ')
         inp_mlc = f"split={values['split']} encoder={values['encoder']} epochs={values['epochs']}".split(' ')
         inp_bc = f"split={values['split']} encoder={values['encoder']} epochs={values['epochs']}".split(' ')
@@ -163,6 +167,7 @@ class TestConfig(unittest.TestCase):
         config = Config()
 
         # Add experiments
+        config.add_experiment(data, name, *inp_data)
         config.add_experiment(n2v, name, *inp_n2v)
         config.add_experiment(mlc, name, *inp_mlc)
         config.add_experiment(bc, name, *inp_bc)
@@ -171,11 +176,14 @@ class TestConfig(unittest.TestCase):
         fp1 = os.path.join(self.fp, f"{self.name}.yaml")
         with open(fp1, 'r') as f: 
             conf1 = yaml.load(f, Loader=yaml.FullLoader)        
+        out_data =  conf1[data]['experiments']            
         out_n2v =  conf1[n2v]['experiments']
         out_mlc = conf1[mlc]['experiments']
         out_bc = conf1[bc]['experiments']
 
         # ++++ Testing ++++
+        self.assertEqual(out_data[name]['p'], values['p'])
+        self.assertEqual(out_data[name]['q'], values['q'])
         self.assertEqual(out_n2v[name]['epochs'], values['epochs'])
         self.assertEqual(out_n2v[name]['embedding_dim'], values['embedding_dim'])
         self.assertEqual(out_mlc[name]['epochs'], values['epochs'])
@@ -214,6 +222,7 @@ class TestConfig(unittest.TestCase):
         > Error handling when name not found
         '''        
 
+        data = 'data'
         bc = 'binaryClassifier'
         mlc = 'multiLabelClassifier'
         n2v = 'node2vec'
@@ -222,6 +231,7 @@ class TestConfig(unittest.TestCase):
 
         config = Config()
 
+        config.set_experiment(data, name)
         config.set_experiment(bc, name)
         config.set_experiment(mlc, name)
         config.set_experiment(n2v, name)
@@ -231,6 +241,7 @@ class TestConfig(unittest.TestCase):
             curr = yaml.load(f, Loader=yaml.FullLoader) 
 
         # ++++ Testing ++++
+        self.assertEqual(curr[data]['current'], name) # Accurate assignment        
         self.assertEqual(curr[bc]['current'], name) # Accurate assignment
         self.assertEqual(curr[mlc]['current'], name) # Accurate assignment
         self.assertEqual(curr[n2v]['current'], name) # Accurate assignment
@@ -294,8 +305,6 @@ class TestConfig(unittest.TestCase):
         name = self.name
         error = 'missing_name'
         values = {
-            'p': 1000,
-            'q': -10,
             'version': '1.1.111'
         }        
 
@@ -312,8 +321,6 @@ class TestConfig(unittest.TestCase):
 
         # ++++ Testing ++++
         self.assertNotEqual(conf1, conf2) # Config has been modified
-        self.assertEqual(conf2['data']['p'], values['p']) # Accurate assignment
-        self.assertEqual(conf2['data']['q'], values['q']) # Accurate assignment
         self.assertEqual(conf2['data']['version'], values['version']) # Accurate assignment
         with self.assertRaises(NameError): # File doesnt exists
             config.edit(error, *[f"{k}={v}" for k, v in values.items()])
@@ -328,6 +335,7 @@ class TestConfig(unittest.TestCase):
         '''        
 
         # Set up variables
+        data = 'data'
         bc = 'binaryClassifier'
         mlc = 'multiLabelClassifier'
         n2v = 'node2vec'
@@ -342,6 +350,10 @@ class TestConfig(unittest.TestCase):
             'epochs': 1,
             'embedding_dim': 3.14
         }        
+        values_data = {
+            'num_walks': 100,
+            'walk_length': 5000
+        }                
 
         config = Config()
 
@@ -349,6 +361,7 @@ class TestConfig(unittest.TestCase):
         with open(fp1, 'r') as f: 
             conf1 = yaml.load(f, Loader=yaml.FullLoader)  # Conf before edit
 
+        config.edit_experiment(data, name, *[f"{k}={v}" for k, v in values_data.items()])
         config.edit_experiment(bc, name, *[f"{k}={v}" for k, v in values.items()])  
         config.edit_experiment(mlc, name, *[f"{k}={v}" for k, v in values.items()])  
         config.edit_experiment(n2v, name, *[f"{k}={v}" for k, v in values_n2v.items()])  
@@ -356,12 +369,15 @@ class TestConfig(unittest.TestCase):
         with open(fp1, 'r') as f: 
             conf2 = yaml.load(f, Loader=yaml.FullLoader)  # Conf after edit              
 
+        out_data =  conf2[data]['experiments']
         out_n2v =  conf2[n2v]['experiments']
         out_mlc = conf2[mlc]['experiments']
         out_bc = conf2[bc]['experiments']
 
         # ++++ Testing ++++
         self.assertNotEqual(conf1, conf2) # Config has been modified
+        self.assertEqual(out_data[name]['num_walks'], values_data['num_walks']) # Accurate assignment
+        self.assertEqual(out_data[name]['walk_length'], values_data['walk_length']) # Accurate assignment        
         self.assertEqual(out_n2v[name]['epochs'], values_n2v['epochs']) # Accurate assignment
         self.assertEqual(out_n2v[name]['embedding_dim'], values_n2v['embedding_dim']) # Accurate assignment
         self.assertEqual(out_mlc[name]['epochs'], values['epochs']) # Accurate assignment
@@ -407,6 +423,7 @@ class TestConfig(unittest.TestCase):
         '''        
         
         # Set up variables
+        data = 'data'
         bc = 'binaryClassifier'
         mlc = 'multiLabelClassifier'
         n2v = 'node2vec'
@@ -418,6 +435,7 @@ class TestConfig(unittest.TestCase):
         with open(fp1, 'r') as f: 
             conf1 = yaml.load(f, Loader=yaml.FullLoader)  # Conf before edit
 
+        config.delete_experiment(data, name)
         config.delete_experiment(bc, name)
         config.delete_experiment(mlc, name)
         config.delete_experiment(n2v, name)
@@ -427,6 +445,8 @@ class TestConfig(unittest.TestCase):
 
         # ++++ Testing ++++
         self.assertNotEqual(conf1, conf2) # Config has been modified
+        with self.assertRaises(AssertionError): # Successfully deleted & file does not exist
+            config.delete_experiment(data, name)           
         with self.assertRaises(AssertionError): # Successfully deleted & file does not exist
             config.delete_experiment(bc, name)             
         with self.assertRaises(AssertionError): # Successfully deleted & file does not exist

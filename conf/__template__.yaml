@@ -3,12 +3,15 @@
 
 data:
   version: "4.4.207"
-  p: .5
-  q: .7
-  walk_length: 80
-  num_walks: 10
-  window_size: 2
-  negative_samples: 5
+  current: default
+  experiments:
+    default:
+      p: .5
+      q: .7
+      walk_length: 80
+      num_walks: 10
+      window_size: 2
+      negative_samples: 5
 
 
 node2vec: 
