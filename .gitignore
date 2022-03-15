@@ -7,6 +7,7 @@
 # All Downloaded and transformed data
 data/raw/*.txt
 data/raw/*.gmt
+data/processed/lookup.csv
 
 # All configuration files except templates
 conf/*

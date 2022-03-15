@@ -7,7 +7,7 @@ import pathlib
 import numpy as np
 import pandas as pd
 
-from source.datasets.MSig import MSig
+from source.datasets.msig import MSig
 
 # Configure unittest
 unittest.TestLoader.sortTestMethodsUsing = None

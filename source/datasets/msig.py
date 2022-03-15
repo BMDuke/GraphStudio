@@ -6,8 +6,8 @@ from prettytable import PrettyTable
 class MSig(object):
 
     '''
-    This class is an abstraction of the raw msig gene enrichment
-    dataset downloaded from:
+    This class handles file IO, data exploration, data preprocessing
+    and basic validation for the MGSig gene annotation dataset:
      - http://www.gsea-msigdb.org/gsea/index.jsp
 
     About:
@@ -62,9 +62,12 @@ class MSig(object):
         '''
 
         raw = self._load_raw_msig()
-        data = self._parse_gmt(raw)
+        data = self._parse_gmt([raw])
 
         df = pd.DataFrame(data=data)
+
+        is_valid = self.validate(df)
+        assert is_valid, "ERROR: MSig.process() - dataset failed validation"
 
         self._save(df)
 
@@ -122,7 +125,7 @@ class MSig(object):
             else:
                 print('>> Learning is multiclass classification problem\n')
 
-    def validate(self):
+    def validate(self, data=None):
         '''
         Validate the processed data:
          - Print the result
@@ -131,7 +134,8 @@ class MSig(object):
         Checks:
          - No NA's
         '''
-        data = self._load_msig()
+        if not data:
+            data = self._load_msig()
 
         validation = PrettyTable()
         validation.field_names = ['Criteria', 'Result']
