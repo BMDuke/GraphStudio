@@ -51,42 +51,18 @@ class MSig(object):
     HEADER1 = 'function'   
     HEADER2 = 'gene_id'   
 
-    def __init__(self, config, debug=False):
-        self.config = config
+    def __init__(self, config=None, debug=False, verbose=True):
+        self.config = config # Include this for polymorphic interface
         self.debug = debug
+        self.verbose = verbose # Can be disabled for unit testing
 
     def process(self):
+        '''
+        Orchestrates the processing of the raw MSig data
+        '''
 
-        raw_lines = self._load_raw_msig()
-
-        # Column headers as first entries in list to which values 
-        # will be appended
-        column1 = [self.HEADER1]
-        column2 = [self.HEADER2]
-
-        for line in raw_lines:
-                
-            tokens = line.split('\t')
-                        
-            # Line reads function, url, gene1, gene2, ...
-            # We want the function and genes, not the url
-            functional_annotation = tokens[0]    
-
-            for idx in range(2, len(tokens)):
-                gene = tokens[idx]
-
-                # remove any newline characters
-                if not gene.isdigit():
-                    gene = gene.replace('\n', '')
-
-                column1.append(functional_annotation)
-                column2.append(int(gene))     
-
-        # Transform into a dictionary and turn into a pandas DF
-        data = {
-            column1[0]: column1[1:],
-            column2[0]: column2[1:]
-        }
+        raw = self._load_raw_msig()
+        data = self._parse_gmt(raw)
 
         df = pd.DataFrame(data=data)
 
@@ -134,22 +110,23 @@ class MSig(object):
             multilable.add_row( [ index, value ] )
 
         # Display Summaries
-        print("+++++++++++++++++ SUMMARY +++++++++++++++++")
-        print(num_rows, '\n')
-        print("+++++++++++++++++ GENES PER LABEL +++++++++++++++++")
-        print(labels, '\n') 
-        print("+++++++++++++++++ LABELS PER GENE +++++++++++++++++")
-        print(multilable, '\n')
-        if is_multilable_classification:
-            print('>> Learning is multilabel classification problem\n')
-        else:
-            print('>> Learning is multiclass classification problem\n')
+        if self.verbose:
+            print("+++++++++++++++++ SUMMARY +++++++++++++++++")
+            print(num_rows, '\n')
+            print("+++++++++++++++++ GENES PER LABEL +++++++++++++++++")
+            print(labels, '\n') 
+            print("+++++++++++++++++ LABELS PER GENE +++++++++++++++++")
+            print(multilable, '\n')
+            if is_multilable_classification:
+                print('>> Learning is multilabel classification problem\n')
+            else:
+                print('>> Learning is multiclass classification problem\n')
 
     def validate(self):
         '''
         Validate the processed data:
          - Print the result
-         - Return True is passes checks
+         - Return True if passes checks
 
         Checks:
          - No NA's
@@ -168,7 +145,8 @@ class MSig(object):
                 has_nas = True
         
         # Display validation results
-        print(validation)
+        if self.verbose:
+            print(validation)
 
         return not any([ has_nas ]) # Return True is all checks pass
 
@@ -178,7 +156,8 @@ class MSig(object):
         '''    
         data = self._load_msig()
 
-        print(data.head(n=nrows))
+        if self.verbose:
+            print(data.head(n=nrows))
 
 
     def _load_msig(self):
@@ -237,7 +216,8 @@ class MSig(object):
         try:
 
             dataframe.to_csv(filepath, index=False)
-            print(f'SAVED: {filepath}')
+            if self.verbose:
+                print(f'SAVED: {filepath}')
         
         except Exception as e: 
 
@@ -249,10 +229,56 @@ class MSig(object):
         Modify a filepath so that a copy can be used exclusively 
         for testing purposes without risking corrupting project data
         '''
+
+        assert filepath 
+
         split_fp = filepath.split('.')
         split_fp[0] += '_TEST'
 
         return '.'.join(split_fp)
+
+    def _parse_gmt(self, raw_lines):     
+        '''
+        Gmt format is:
+        [annotation, url, gene1, gene2, gene3...]
+
+        This transforms gmt to:
+        [annotation, gene1]
+        [annotation, gene2]
+
+        Returns the data as a dict suitable for pandas 
+        '''
+
+        # Column headers as first entries in list to which values 
+        # will be appended
+        column1 = [self.HEADER1]
+        column2 = [self.HEADER2]
+
+        for line in raw_lines:
+                
+            tokens = line.split('\t')
+                        
+            # Line reads function, url, gene1, gene2, ...
+            # We want the function and genes, not the url
+            functional_annotation = tokens[0]    
+
+            for idx in range(2, len(tokens)):
+                gene = tokens[idx]
+
+                # remove any newline characters
+                if not gene.isdigit():
+                    gene = gene.replace('\n', '')
+
+                column1.append(functional_annotation)
+                column2.append(int(gene))     
+
+        # Transform into a dictionary and turn into a pandas DF
+        data = {
+            column1[0]: column1[1:],
+            column2[0]: column2[1:]
+        }       
+
+        return data
 
 
         
@@ -267,4 +293,4 @@ if __name__ == "__main__":
     # msig.describe()   # PASSED
     # t = msig.validate()   # PASSED
     # print(t)    # PASSED
-    msig.head()
+    # msig.head()
