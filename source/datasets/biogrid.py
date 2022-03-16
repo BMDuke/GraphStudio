@@ -1,10 +1,16 @@
 import os
+import subprocess
 
+import numpy as np
 import pandas as pd
-from prettytable import PrettyTable
+import matplotlib.pyplot as plt
+
 import tqdm
+from prettytable import PrettyTable
+from bashplotlib.scatterplot import plot_scatter
 
 from source.utils.config import Config
+from source.utils.archive import Archive
 
 class BioGrid(object):
     
@@ -67,18 +73,118 @@ class BioGrid(object):
         # Load and filter the data
         f = self._filter_biogrid        # The filter function to be passed to loader
         ppi = self._load_raw_biogrid(ppi, raw_filepath, f)
+        ppi = ppi.drop_duplicates()     # Drop any duplicated rows
 
         # Validate the dataframe
         is_valid = self.validate(ppi)
         assert is_valid, 'ERROR: Biogrid.process() - processed dataset failed validation, aborting'
 
         # Save the data
-        self._save(ppi)
+        self._save(ppi, add_to_lookup=True)
 
         return ppi
 
     def describe(self):
-        pass    
+        '''
+        Describe the processed data. We will look at the total number of 
+        interactions and the distribution of the number of interactions
+        individual proteins are in.
+        '''
+        ppi = self._load_ppi()
+
+        # Entire PPI dataset
+        ppi_summary = PrettyTable()
+        ppi_summary.field_names = ['Interactions', 'Unique interactors A', 'Unique interactors B', 'Total Unique']
+        num_interactions = len(ppi.index)
+        unique_a = pd.unique(ppi[self.interactor_a]).size
+        unique_b = pd.unique(ppi[self.interactor_b]).size
+        unique_total = pd.unique(np.concatenate((ppi[self.interactor_b], ppi[self.interactor_b]))).size
+        ppi_summary.add_row([num_interactions, unique_a, unique_b, unique_total])
+
+        summary = ['Count', 'Mean', 'Std', 'Min', 'Max']
+        deciles = [f"{i}0%" for i in range(1, 10)]
+        percentiles = [f"9{i}%" for i in range(1, 10)]
+        permilles = [f"99.{i}%" for i in range(1, 10)]
+
+        # Interactor A - Outgoing connections
+        a_summary = PrettyTable()
+        a_deciles = PrettyTable()
+        a_percentiles = PrettyTable()
+        a_permilles = PrettyTable()
+
+        a_summary.field_names = summary
+        a_deciles.field_names = deciles
+        a_percentiles.field_names = percentiles
+        a_permilles.field_names = permilles
+
+        interactor_activity_a = ppi[self.interactor_a].value_counts() # How many time a protein occurs
+        activity_description_a = interactor_activity_a.describe(percentiles=[.1, .2, .3, .4, .5, .6, .7, .8, .9, .91, .92, .93, .94, .95, .96, .97, .98, .99, .991, .992, .993, .994, .995, .996, .997, .998, .999])
+        a_stat_summary = [int(activity_description_a[i.lower()]) for i in summary]
+        a_stat_decile = [int(activity_description_a[i]) for i in deciles]
+        a_stat_percentile = [int(activity_description_a[i]) for i in percentiles]
+        a_stat_permille = [int(activity_description_a[i]) for i in permilles]
+
+        a_summary.add_row(a_stat_summary)
+        a_deciles.add_row(a_stat_decile)
+        a_percentiles.add_row(a_stat_percentile)
+        a_permilles.add_row(a_stat_permille)
+        
+        # Interactor B - Incoming connections
+        b_summary = PrettyTable()
+        b_deciles = PrettyTable()
+        b_percentiles = PrettyTable()
+        b_permilles = PrettyTable()
+
+        b_summary.field_names = summary
+        b_deciles.field_names = deciles
+        b_percentiles.field_names = percentiles
+        b_permilles.field_names = permilles
+
+        interactor_activity_b = ppi[self.interactor_b].value_counts() # How many time a protein occurs
+        activity_description_b = interactor_activity_b.describe(percentiles=[.1, .2, .3, .4, .5, .6, .7, .8, .9, .91, .92, .93, .94, .95, .96, .97, .98, .99, .991, .992, .993, .994, .995, .996, .997, .998, .999])
+        b_stat_summary = [int(activity_description_b[i.lower()]) for i in summary]
+        b_stat_decile = [int(activity_description_b[i]) for i in deciles]
+        b_stat_percentile = [int(activity_description_b[i]) for i in percentiles]
+        b_stat_permille = [int(activity_description_b[i]) for i in permilles]
+
+        b_summary.add_row(b_stat_summary)
+        b_deciles.add_row(b_stat_decile)
+        b_percentiles.add_row(b_stat_percentile)
+        b_permilles.add_row(b_stat_permille)        
+          
+
+
+        if self.verbose:
+            # Context
+            print("Interaction pairs should be read Interactor A -> acts on -> Interactor B")
+            
+            # Summary
+            print("\n>>\tPPI dataset summary:\n")
+            print(ppi_summary, '\n')
+
+            # Interactor A
+            print(">>\tInteractor A summary (outgoing interactions):\n")
+            print("\nStatistics of outgoing edges")
+            print(a_summary)
+            print("\nDeciles of outgoing edges")
+            print(a_deciles)
+            print("\n Top 10th percentiles of outgoing edges")
+            print(a_percentiles)
+            print("\n Top 10th permilles of outgoing edges")
+            print(a_permilles)
+            print('\n')
+
+            # Interactor B
+            print(">>\tInteractor B summary (incoming interactions):\n")
+            print("\nStatistics of incoming edges")
+            print(b_summary)
+            print("\nDeciles of incoming edges")
+            print(b_deciles)
+            print("\n Top 10th percentiles of incoming edges")
+            print(b_percentiles)
+            print("\n Top 10th permilles of incoming edges")
+            print(b_permilles)            
+            
 
     def validate(self, dataframe=None):
         '''
@@ -101,13 +207,20 @@ class BioGrid(object):
         
         # Display validation results
         if self.verbose:
+            print('\n++++++++++++++++ DATASET VALIDATION ++++++++++++++++')
             print(validation)
 
         return not any([ has_nas ]) # Return True is all checks pass            
         
 
-    def head(self):
-        pass       
+    def head(self, nrows=10):
+        '''
+        Display the top n rows of the processed biogrid dataset
+        '''
+        ppi = self._load_ppi()
+
+        if self.verbose:
+            print(ppi.head(nrows))
 
     def _load_raw_biogrid(self, dataframe, filepath, *filters):
         '''
@@ -119,10 +232,18 @@ class BioGrid(object):
         *filters        Any filters to be applied to the data. 
         '''
 
+        assert os.path.exists(filepath), f"Error {filepath} does not exist"
+
         try:
 
+            tqdm_disable = False
+            if self.debug:
+                tqdm_disable = True  
+            if self.verbose:  
+                print(f"\nLoading BioGrid data set and filtering by:\n Organism: {self.organism}\n Format: {self.interactor_a}\n")
+            num_lines = int(subprocess.check_output(f"wc -l {filepath}", shell=True).split()[0]) - 1
             with pd.read_table(filepath, chunksize=self.chunksize) as data_in:
-                for chunk in tqdm.tqdm(data_in):
+                for chunk in tqdm.tqdm(data_in, total=num_lines/self.chunksize, disable=tqdm_disable):
             
                     for filter in filters:
                         chunk = filter(chunk)
@@ -136,19 +257,25 @@ class BioGrid(object):
         except Exception as e:
 
             print(f"ERROR: {e}")
+            raise
 
         return dataframe
 
-    def _load_ppi(self):
+    def _load_ppi(self, filepath=None):
         '''
         Load a pandas df, with optional test identifier. 
         Uses the hash of the conf version to identify the dataset
         '''
-        version = self._get_conf_version()
 
-        filename = f"{self._hash(version)}.csv"
+        if not filepath:
 
-        filepath = os.path.join(self.processed_dir, filename)
+            # Make unique ID
+            config = self.config
+            archive = Archive(config)
+            id = archive.make_id('biogrid', 'version')
+
+            filename = f"{id}.csv"
+            filepath = os.path.join(self.processed_dir, filename)
 
         if self.debug:
             filepath = self._make_test_filepath(filepath)
@@ -163,17 +290,24 @@ class BioGrid(object):
 
         return dataframe                    
 
-    def _save(self, dataframe):
+    def _save(self, dataframe, add_to_lookup=False, filepath=None):
         '''
         Writes out a pandas df, with optional test identifier. 
         Uses the conf version to create a unique hash. 
+        *Filepath is only for unittesting
         '''
 
-        version = self._get_conf_version()
+        if not filepath:
 
-        filename = f"{self._hash(version)}.csv"
+            # Make unique ID 
+            config = self.config
+            archive = Archive(config)
+            id = archive.make_id('biogrid', 'version', add_to_lookup=add_to_lookup)
 
-        filepath = os.path.join(self.processed_dir, filename)
+            filename = f"{id}.csv"
+            filepath = os.path.join(self.processed_dir, filename)
+
+        
 
         if self.debug:
             filepath = self._make_test_filepath(filepath)
@@ -187,6 +321,8 @@ class BioGrid(object):
         except Exception as e: 
 
             print(f"ERROR: {e}") 
+
+        return filepath
 
     def _filter_biogrid(self, chunk):
         '''
@@ -219,13 +355,6 @@ class BioGrid(object):
 
         return version
 
-    def _hash(self, version):
-        '''
-        Make a hash based on the version of the biogrid data
-        '''
-        print(version)
-        return hash(str(version))
-
     def _make_test_filepath(self, filepath):
         '''
         Modify a filepath so that a copy can be used exclusively 
@@ -241,6 +370,8 @@ class BioGrid(object):
      
 if __name__ == "__main__":
     config = Config()
-    msig = BioGrid(config, debug=True)
-    msig.process()
+    msig = BioGrid(config, debug=False)
+    # msig.process()
+    # msig.head()
+    msig.describe()
     

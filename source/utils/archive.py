@@ -45,7 +45,7 @@ class Archive(object):
                 'version':config['data']['version'],
                 'p': experiment['p'],
                 'q': experiment['q'],
-                'walk_length': experiment['Walk_length'],
+                'walk_length': experiment['walk_length'],
                 'num_walks': experiment['num_walks'],
                 'window_size': experiment['window_size'],
                 'negative_samples': experiment['negative_samples']
@@ -90,7 +90,7 @@ class Archive(object):
 
         try:
 
-            lookup = pd.read_csv(filepath, index_col=False)
+            lookup = pd.read_csv(filepath)
             return lookup
         
         except Exception as e:
@@ -171,7 +171,7 @@ class Archive(object):
             with os.scandir(d) as directory:
                 for item in directory:
                     if item.is_file():
-                        id = item.split('.')[0]
+                        id = item.path.split('.')[0]
                         ids.append(id)
         
         # Filter lookup table by ids present in file system
@@ -194,13 +194,13 @@ class Archive(object):
 
         current = config['data']['current']
         
-        # Hash of version
+        # Hash of version - Basic PPI
         if 'version' in params:
             version = bytes(str(config['data']['version']), 'utf-8')
             hash_master.update(version)
             id = hash_master.hexdigest(hash_length)
         
-        # Hash of p, q
+        # Hash of p, q - Preprocessed graph weights
         if ('p' in params) or ('q' in params):
             p = bytes(str(config['data']['experiments'][current]['p']), 'utf-8')
             q = bytes(str(config['data']['experiments'][current]['q']), 'utf-8')
@@ -208,7 +208,7 @@ class Archive(object):
             hash_master.update(q)
             id = hash_master.hexdigest(hash_length)
 
-        # Hash of walk_length and num_walks
+        # Hash of walk_length and num_walks - Walks
         if ('walk_length' in params) or ('num_walks' in params):
             walk_length = bytes(str(config['data']['experiments'][current]['walk_length']), 'utf-8')
             num_walks = bytes(str(config['data']['experiments'][current]['num_walks']), 'utf-8')
@@ -216,7 +216,7 @@ class Archive(object):
             hash_master.update(num_walks)
             id = hash_master.hexdigest(hash_length)      
 
-        # Hash of window_size and negative_samples
+        # Hash of window_size and negative_samples - Node Embeddings
         if ('window_size' in params) or ('negative_samples' in params):
             window_size = bytes(str(config['data']['experiments'][current]['window_size']), 'utf-8')
             negative_samples = bytes(str(config['data']['experiments'][current]['negative_samples']), 'utf-8')
@@ -242,7 +242,8 @@ class Archive(object):
     
 if __name__ == "__main__":
     archive = Archive('c')
-    archive._prune_lookup()
+    # archive._prune_lookup()
+    pass
 
      
         

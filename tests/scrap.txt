@@ -11,3 +11,6 @@ python -m run.config current
 
 # Fail
 python -m run.config new experiment binaryClassifier test encoder=test epochs=100 
+
+# !! Running modules - example
+python -m source.utils.archive
