@@ -373,5 +373,5 @@ if __name__ == "__main__":
     msig = BioGrid(config, debug=False)
     # msig.process()
     # msig.head()
-    msig.describe()
+    # msig.describe()
     

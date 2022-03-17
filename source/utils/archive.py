@@ -21,9 +21,12 @@ class Archive(object):
 
     hash_length = 7
 
-    def __init__(self, config, lookup_fp=None):
+    def __init__(self, config, lookup_fp=None, alt_dir=None):
         self.config = config
         self.lookup_fp = lookup_fp # Used to create seperate lookup for testing
+
+        if alt_dir:
+            self.data_dir = alt_dir # Use alternative data directory if specified. 
 
         self._init_lookup()
         self._prune_lookup()
@@ -90,7 +93,7 @@ class Archive(object):
 
         try:
 
-            lookup = pd.read_csv(filepath)
+            lookup = pd.read_csv(filepath, index_col=False)
             return lookup
         
         except Exception as e:
@@ -110,7 +113,7 @@ class Archive(object):
         
         except Exception as e:
 
-            print(f"ERROR: {e}")        
+            print(f"ERROR: {e}")   
 
 
     def _add_to_lookup(self, id, type, params):
@@ -148,7 +151,9 @@ class Archive(object):
         '''
         lookup = self._load_lookup()
 
-        lookup = lookup.drop([ lookup['id'] == id ])
+        filtered = lookup['id'] != id
+
+        lookup = lookup[filtered]
 
         self._save_lookup(lookup)
 
@@ -171,7 +176,7 @@ class Archive(object):
             with os.scandir(d) as directory:
                 for item in directory:
                     if item.is_file():
-                        id = item.path.split('.')[0]
+                        id = item.name.split('.')[0]
                         ids.append(id)
         
         # Filter lookup table by ids present in file system
@@ -186,6 +191,10 @@ class Archive(object):
         define the various datasets as arguments. It then uses
         the names as keys to retrueve the values from the config 
         file. The values are then used to make the hash
+
+        *params         These are the names of parameters
+                        as strings. Example: 'version',
+                        not 4.4.207, 'p', not 0.5
         '''
 
         config = self.config.show()
@@ -233,7 +242,7 @@ class Archive(object):
         Returns the filepath to the lookup table
         '''
         if self.lookup_fp is not None:
-            return self.lookup_fp
+            return os.path.join(self.data_dir, self.lookup_fp)
         else:
             return os.path.join(self.data_dir, self.filename)
 

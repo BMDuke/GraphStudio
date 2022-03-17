@@ -151,3 +151,6 @@ if __name__ == "__main__":
 
             config.delete(name)
     
+    else:
+
+        raise ValueError(f"ERROR: argument'{command}' unknown")
