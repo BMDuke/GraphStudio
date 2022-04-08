@@ -8,6 +8,13 @@
 data/raw/*.txt
 data/raw/*.gmt
 data/processed/lookup.csv
+data/processed/biogrid/*
+data/processed/edges/*
+data/processed/gene_ids/*
+data/processed/skipgrams/*
+data/processed/transition_probs/*
+data/processed/vertices/*
+data/processed/walks/*
 
 # All configuration files except templates
 conf/*

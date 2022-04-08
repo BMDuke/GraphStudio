@@ -371,7 +371,7 @@ class BioGrid(object):
 if __name__ == "__main__":
     config = Config()
     msig = BioGrid(config, debug=False)
-    # msig.process()
-    # msig.head()
-    # msig.describe()
+    msig.process()
+    msig.head()
+    msig.describe()
     

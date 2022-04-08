@@ -62,7 +62,7 @@ class MSig(object):
         '''
 
         raw = self._load_raw_msig()
-        data = self._parse_gmt([raw])
+        data = self._parse_gmt(raw)
 
         df = pd.DataFrame(data=data)
 
@@ -134,7 +134,7 @@ class MSig(object):
         Checks:
          - No NA's
         '''
-        if not data:
+        if data is None:
             data = self._load_msig()
 
         validation = PrettyTable()
@@ -289,12 +289,12 @@ class MSig(object):
 
 
 if __name__ == "__main__":
-    msig = MSig('config', debug=True)
-    # gmt = msig.process()  # PASSED
+    msig = MSig('config', debug=False)
+    gmt = msig.process()  # PASSED
     # print(gmt)    # PASSED
     # df = msig._load_msig()    # PASSED
     # print(df) # PASSED
-    # msig.describe()   # PASSED
+    msig.describe()   # PASSED
     # t = msig.validate()   # PASSED
     # print(t)    # PASSED
-    # msig.head()
+    msig.head()
