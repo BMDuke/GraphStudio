@@ -60,7 +60,7 @@ class Node2Vec:
     '''
 
     def __init__(self, edge_list=None, p=0.5, q=0.7, 
-                    num_walks=10, walk_length=80, is_directed=False):
+                    num_walks=10, walk_length=80, is_directed=False, verbose=True):
         '''
         Only undirected and directed graphs supported currently
         '''
@@ -69,15 +69,24 @@ class Node2Vec:
             nx_generator = nx.DiGraph
         else:
             nx_generator = nx.Graph
+        
+        self.graph = nx_generator()
 
-        self.graph = nx_generator(edge_list)
+        if edge_list:
+            if len(edge_list[0]) == 3: # edge list is shape(3 x n) => weighted
+                self.graph.add_weighted_edges_from(edge_list)
+            else:
+                self.graph.add_edges_from(edge_list)
+
         self.p = p
         self.q = q
         self.num_walks = num_walks
         self.walk_length = walk_length
         self.is_directed = is_directed
+        self.verbose = verbose
 
         self.second_order_key = 'second_order_probs'
+        self.temp_dir = 'data/processed/walks/tempdir'
 
     def save(self, filepath, format='gml'):
         '''
@@ -95,7 +104,6 @@ class Node2Vec:
         }
 
         assert format in mapping, f'Method unrecognised: {format} - save files with "gml", "graphml" or "pickle"'
-        assert filepath is not None, "Filepath not provided"
 
         writer = mapping[format]
 
@@ -135,6 +143,7 @@ class Node2Vec:
         try: 
 
             self.graph = reader(filepath_with_suffix)
+            self.is_directed = self.graph.is_directed()
 
         except Exception as e:
 
@@ -206,9 +215,14 @@ class Node2Vec:
 
         graph = graph.to_directed() # Convert to directed graph
 
-        for node in tqdm.tqdm(graph.nodes, desc="Normalising edge weights"):
+        if self.verbose:
+            nodes = tqdm.tqdm(graph.nodes, desc="Normalising edge weights")
+        else: 
+            nodes = graph.nodes
 
-            first_degree_nighbours = [n for n in graph.neighbours(node)]
+        for node in nodes:
+
+            first_degree_nighbours = [n for n in graph.neighbors(node)]
 
             # Calculate normalising constant for nodes outgoing edges
             normalising_constant = sum([graph[node][neighbour].get('weight', 1.) 
@@ -230,20 +244,25 @@ class Node2Vec:
             made to multiple copies which would then need reconciling
         '''
 
+        if self.verbose:
+            nodes = tqdm.tqdm(graph.nodes, desc="Calculating transition probabilities")
+        else: 
+            nodes = graph.nodes
+
         # Calculate transition probabilities
-        for source in tqdm.tqdm(graph.nodes, desc="Calculating transition probabilities"):
+        for source in nodes:
             
-            first_degree_nighbours = [n for n in graph.neighbours(source)]
+            first_degree_nighbours = [n for n in graph.neighbors(source)]
 
             for neighbour in first_degree_nighbours:
 
-                second_degree_neighbours = [n for n in graph.neighbours(neighbour)]
+                second_degree_neighbours = [n for n in graph.neighbors(neighbour)]
 
                 unnormalised_transition_probabilities = {}
 
                 for destination in second_degree_neighbours:
 
-                    weight = graph[neighbour][destination].get('weight', 1.)
+                    weight = graph[neighbour][destination].get('weight')
                     weight = float(weight)
 
                     # Calculate the modified weights
@@ -287,10 +306,10 @@ class Node2Vec:
 
         # Create directories to persist walks if filepath provided
         if filepath:
-            temp_dir = 'data/processed/walks/tempdir'
-            result_fp = '.'.join(filepath, 'csv')
+            temp_dir = self.temp_dir
+            result_fp = '.'.join([filepath, 'csv'])
             os.mkdir(temp_dir) # Create a temporary directory 
-            pathlib.Path.touch(result_fp, exist_ok=False) # Create result file 
+            pathlib.Path.touch(pathlib.Path(result_fp), exist_ok=False) # Create result file 
 
         # Split the nodes into chunks
         num_cpus = multiprocessing.cpu_count()
@@ -309,21 +328,23 @@ class Node2Vec:
             for i, chunk in enumerate(chunks):
                 fp = None
                 if filepath:
-                    fp = os.path.join(temp_dir, i)
+                    fp = os.path.join(temp_dir, str(i))
                 future = executor.submit(func, chunk, graph, fp) # If filepath is provided, walks are saved to that location
                 futures.append(future)
 
             for future in futures:
-                walks.append(future.result())    
+                walks.extend(future.result())    
 
         # Combine results if filepath provided
         if filepath:
             self._combine_results(temp_dir, result_fp)
             self._cleanup(temp_dir)
-        # For each file in the temp dir 
-        #   Load the file
-        #   Append the contents of the file to the results file
-        # Delete the temp dir
+
+        # Return walks or sample of walks
+        if filepath: # filepath was given therefore walks were written to disk and nothing returned
+            return pd.read_csv(result_fp, nrows=1000, header=None)
+        else:
+            return walks
     
     def _make_chunks(self, n, iterable):
         '''
@@ -332,7 +353,7 @@ class Node2Vec:
         it = iter(iterable)
 
         while True:
-            chunk = tuple(itertools.islice(it, n))
+            chunk = list(itertools.islice(it, n))
             if not chunk:
                 return
             yield chunk
@@ -349,7 +370,12 @@ class Node2Vec:
 
         walks = []
 
-        for _ in tqdm.tqdm(range(num_walks), desc=f'Generating random walks - chunksize: {len(nodes)} walks: {num_walks} length: {walk_length}'):
+        if self.verbose:
+            num_walks = tqdm.tqdm(range(num_walks), desc=f'Generating random walks - chunksize: {len(nodes)} walks: {num_walks} length: {walk_length}')
+        else:
+            num_walks = range(num_walks)
+
+        for _ in num_walks:
 
             random.shuffle(nodes)
 
@@ -391,7 +417,7 @@ class Node2Vec:
 
         if filepath:
             self._to_csv(walks, filepath)
-            return
+            return []
         
         return walks
 
@@ -404,7 +430,7 @@ class Node2Vec:
 
             f_out = f'{filepath}.csv'
             dataframe = pd.DataFrame(data)
-            dataframe.to_csv(f_out, index=False)
+            dataframe.to_csv(f_out, index=False, header=False)
         
         except Exception as e: 
 
@@ -452,9 +478,9 @@ class Node2Vec:
 
 if __name__ == "__main__":
     n2v = Node2Vec()
-    print('\n', n2v.get())    
-    n2v.set(p=100, q='testing_q_value')
-    print('\n', n2v.get('p', 'q'))    
-    n2v.set(p=100, q='testing_q_value', d=0.1)
+    # print('\n', n2v.get())    
+    # n2v.set(p=100, q='testing_q_value')
+    # print('\n', n2v.get('p', 'q'))    
+    # n2v.set(p=100, q='testing_q_value', d=0.1)
 
 
