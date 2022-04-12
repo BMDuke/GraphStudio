@@ -25,6 +25,7 @@ class Config(object):
     > Give the config a static method to return the current
         config
     > Provide commentary via stdout
+    > This should be modelled as a singleton class
 
     '''    
 

@@ -132,6 +132,7 @@ class TestNode2Vec(unittest.TestCase):
         n2v.save(filepath, format='gml')
         n2v.save(filepath, format='graphml')
         n2v.save(filepath, format='pickle')
+        n2v.save(filepath, format='json')
 
         # List all files in the temp_dir
         files = [os.path.join(self.temp_dir, f) 
@@ -145,6 +146,7 @@ class TestNode2Vec(unittest.TestCase):
         self.assertTrue(any([f.endswith('gml') for f in files])) # Suffix correctly added - correctness implicit as files exist
         self.assertTrue(any([f.endswith('graphml') for f in files])) # Suffix correctly added   - correctness implicit as files exist
         self.assertTrue(any([f.endswith('pickle') for f in files])) # Suffix correctly added - correctness implicit as files exist
+        self.assertTrue(any([f.endswith('json') for f in files])) # Suffix correctly added - correctness implicit as files exist
         with self.assertRaises(AssertionError):
             n2v.save(filepath, format='made_up_extension') # Error correctly handled
 
@@ -168,6 +170,7 @@ class TestNode2Vec(unittest.TestCase):
         n2v.save(filepath, format='gml')
         n2v.save(filepath, format='graphml')
         n2v.save(filepath, format='pickle')
+        n2v.save(filepath, format='json')
 
         # List all files in the temp_dir
         files = [os.path.join(self.temp_dir, f) 
@@ -181,10 +184,12 @@ class TestNode2Vec(unittest.TestCase):
         g1 = Node2Vec(is_directed=True)
         g2 = Node2Vec(is_directed=True)
         g3 = Node2Vec(is_directed=True)
+        g4 = Node2Vec(is_directed=True)
 
         g1.load(filepath, format='gml')
         g2.load(filepath, format='graphml')
         g3.load(filepath, format='pickle')
+        g4.load(filepath, format='json')
 
         # Define the edge matching callable
         edge_match = iso.numerical_edge_match('weight', 1)
@@ -193,6 +198,7 @@ class TestNode2Vec(unittest.TestCase):
         self.assertTrue(nx.is_isomorphic(n2v.graph, g1.graph, edge_match=edge_match)) # The loaded graph is an isomorphic match to the one that was saved - File extension success implicit
         self.assertTrue(nx.is_isomorphic(n2v.graph, g2.graph, edge_match=edge_match)) # The loaded graph is an isomorphic match to the one that was saved - File extension success implicit
         self.assertTrue(nx.is_isomorphic(n2v.graph, g3.graph, edge_match=edge_match)) # The loaded graph is an isomorphic match to the one that was saved - File extension success implicit
+        self.assertTrue(nx.is_isomorphic(n2v.graph, g4.graph, edge_match=edge_match)) # The loaded graph is an isomorphic match to the one that was saved - File extension success implicit
         with self.assertRaises(AssertionError):
             n2v.load(filepath, format='made_up_extension') # Error correctly handled    
 
@@ -391,7 +397,7 @@ class TestNode2Vec(unittest.TestCase):
         p2q2_u_graph_trans_prob = p2q2_u._calculate_transition_probabilities(p2q2_u_graph_normalised)
         p2q2_w_graph_trans_prob = p2q2_w._calculate_transition_probabilities(p2q2_w_graph_normalised)
 
-      
+        key = p1q1_u.second_order_key
 
         # ++++ Testing ++++
         for answer in p1q1_unweighted['answers']: # Calculation is correct
@@ -399,44 +405,44 @@ class TestNode2Vec(unittest.TestCase):
             node_to = answer[0][1]
             node_end = answer[0][2]
             answ = answer[1]
-            self.assertEqual(round(p1q1_u_graph_trans_prob[node_from][node_to]['second_order_probs'][node_end], 7), round(answ, 7)) # Normalisation procedure is correct - undirected graph
+            self.assertEqual(round(p1q1_u_graph_trans_prob[node_from][node_to][key][node_end], 7), round(answ, 7)) # Normalisation procedure is correct - undirected graph
         
         for answer in p1q1_weighted['answers']: # Calculation is correct
             node_from = answer[0][0]
             node_to = answer[0][1]
             node_end = answer[0][2]
             answ = answer[1]
-            self.assertEqual(round(p1q1_w_graph_trans_prob[node_from][node_to]['second_order_probs'][node_end], 7), round(answ, 7)) # Normalisation procedure is correct - undirected graph
+            self.assertEqual(round(p1q1_w_graph_trans_prob[node_from][node_to][key][node_end], 7), round(answ, 7)) # Normalisation procedure is correct - undirected graph
         
         for answer in p2q2_unweighted['answers']: # Calculation is correct
             node_from = answer[0][0]
             node_to = answer[0][1]
             node_end = answer[0][2]
             answ = answer[1]
-            self.assertEqual(round(p2q2_u_graph_trans_prob[node_from][node_to]['second_order_probs'][node_end], 7), round(answ, 7)) # Normalisation procedure is correct - undirected graph                        
+            self.assertEqual(round(p2q2_u_graph_trans_prob[node_from][node_to][key][node_end], 7), round(answ, 7)) # Normalisation procedure is correct - undirected graph                        
         
         for answer in p2q2_weighted['answers']: # Calculation is correct
             node_from = answer[0][0]
             node_to = answer[0][1]
             node_end = answer[0][2]
             answ = answer[1]
-            self.assertEqual(round(p2q2_w_graph_trans_prob[node_from][node_to]['second_order_probs'][node_end], 7), round(answ, 7)) # Normalisation procedure is correct - undirected graph
+            self.assertEqual(round(p2q2_w_graph_trans_prob[node_from][node_to][key][node_end], 7), round(answ, 7)) # Normalisation procedure is correct - undirected graph
 
         for n in p1q1_u_graph_trans_prob.nodes: # Transition probabilities sum to 1
             for m in p1q1_u_graph_trans_prob[n].keys():
-                self.assertGreater(sum(p1q1_u_graph_trans_prob[n][m]['second_order_probs'].values()), 0.999)
+                self.assertGreater(sum(p1q1_u_graph_trans_prob[n][m][key].values()), 0.999)
 
         for n in p1q1_w_graph_trans_prob.nodes: # Transition probabilities sum to 1
             for m in p1q1_w_graph_trans_prob[n].keys():
-                self.assertGreater(sum(p1q1_w_graph_trans_prob[n][m]['second_order_probs'].values()), 0.999)
+                self.assertGreater(sum(p1q1_w_graph_trans_prob[n][m][key].values()), 0.999)
 
         for n in p2q2_u_graph_trans_prob.nodes: # Transition probabilities sum to 1
             for m in p2q2_u_graph_trans_prob[n].keys():
-                self.assertGreater(sum(p2q2_u_graph_trans_prob[n][m]['second_order_probs'].values()), 0.999)
+                self.assertGreater(sum(p2q2_u_graph_trans_prob[n][m][key].values()), 0.999)
 
         for n in p2q2_w_graph_trans_prob.nodes: # Transition probabilities sum to 1
             for m in p2q2_w_graph_trans_prob[n].keys():
-                self.assertGreater(sum(p2q2_w_graph_trans_prob[n][m]['second_order_probs'].values()), 0.999)
+                self.assertGreater(sum(p2q2_w_graph_trans_prob[n][m][key].values()), 0.999)
 
     def test_8_make_chunks(self):
         '''

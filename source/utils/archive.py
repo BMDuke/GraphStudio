@@ -189,7 +189,7 @@ class Archive(object):
         '''
         This takes the names of the parameters that are used to 
         define the various datasets as arguments. It then uses
-        the names as keys to retrueve the values from the config 
+        the names as keys to retrieve the values from the config 
         file. The values are then used to make the hash
 
         *params         These are the names of parameters

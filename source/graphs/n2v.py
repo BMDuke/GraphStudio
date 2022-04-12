@@ -7,6 +7,7 @@ import multiprocessing
 import concurrent.futures
 import random
 import csv
+import ujson as json
 from math import ceil
 
 import networkx as nx
@@ -85,10 +86,10 @@ class Node2Vec:
         self.is_directed = is_directed
         self.verbose = verbose
 
-        self.second_order_key = 'second_order_probs'
+        self.second_order_key = 'secondOrderProbs'
         self.temp_dir = 'data/processed/walks/tempdir'
 
-    def save(self, filepath, format='gml'):
+    def save(self, filepath, format='json'):
         '''
         Save self.graph in the desired format. Supported formats:
          - gml
@@ -100,7 +101,8 @@ class Node2Vec:
         mapping = {
             'gml': nx.write_gml,
             'graphml': nx.write_graphml_lxml,
-            'pickle': nx.write_gpickle
+            'pickle': nx.write_gpickle,
+            'json': self._write_json
         }
 
         assert format in mapping, f'Method unrecognised: {format} - save files with "gml", "graphml" or "pickle"'
@@ -118,7 +120,7 @@ class Node2Vec:
             print(f"ERROR: {e} - node2vec instance .save()")
             raise
 
-    def load(self, filepath, format='gml'):
+    def load(self, filepath, format='json'):
         '''
         Loads a nx graph instance into self.graph. Supported formats:
          - gml
@@ -130,7 +132,8 @@ class Node2Vec:
         mapping = {
             'gml': nx.read_gml,
             'graphml': nx.read_graphml,
-            'pickle': nx.read_gpickle
+            'pickle': nx.read_gpickle,
+            'json': self._read_json
         }
 
         assert format in mapping, f'Method unrecognised: {format} - load files with "gml", "graphml" or "pickle"'
@@ -395,8 +398,9 @@ class Node2Vec:
                 next_node = None                # Node 2 in 2nd order markovian. We are sampling for this one.
 
                 while len(sample) < walk_length:
-
-                    second_order_probs = graph[start_node][current_node]['second_order_probs']
+                    
+                    key = self.second_order_key
+                    second_order_probs = graph[start_node][current_node][key]
                     neighbors, probabilities = [], []
 
                     for key, value in second_order_probs.items():
@@ -473,7 +477,43 @@ class Node2Vec:
             print(f"ERROR: {e}") 
             raise
 
+    def _write_json(self, graph, filepath):
+        '''
+        This is a function to handle converting an nx graph to json
+        format and then writing it out to a file. 
+        '''
 
+        json_data = nx.readwrite.json_graph.node_link_data(graph)
+
+        try: 
+
+            with open(filepath, 'w') as json_out:
+                json.dump(json_data, json_out, indent=4)
+
+        except Exception as e:
+
+            print(f"ERROR: {e}") 
+            raise
+
+    def _read_json(self, filepath):
+        '''
+        This is a function to handle loading a json file and 
+        converting it into a nx graph. 
+        '''
+
+        # json_data = nx.readwrite.json_graph.node_link_data(graph)
+
+        try: 
+
+            with open(filepath, 'r') as json_in:
+                json_data = json.load(json_in)
+            graph = nx.readwrite.json_graph.node_link_graph(json_data)
+            return graph
+
+        except Exception as e:
+
+            print(f"ERROR: {e}") 
+            raise
         
 
 if __name__ == "__main__":
