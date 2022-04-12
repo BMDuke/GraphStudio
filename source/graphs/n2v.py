@@ -87,7 +87,7 @@ class Node2Vec:
         self.verbose = verbose
 
         self.second_order_key = 'secondOrderProbs'
-        self.temp_dir = 'data/processed/walks/tempdir'
+        self.temp_dir = 'cache/networkx/temp_dir'
 
     def save(self, filepath, format='json'):
         '''
@@ -317,7 +317,7 @@ class Node2Vec:
         # Split the nodes into chunks
         num_cpus = multiprocessing.cpu_count()
         nodes = graph.nodes
-        chunksize = ceil(len(nodes) / num_cpus )
+        chunksize = ceil(len(nodes) / (num_cpus * 100) )
         chunks = self._make_chunks(chunksize, nodes)
 
         # Process the chunks
@@ -332,7 +332,7 @@ class Node2Vec:
                 fp = None
                 if filepath:
                     fp = os.path.join(temp_dir, str(i))
-                future = executor.submit(func, chunk, graph, fp) # If filepath is provided, walks are saved to that location
+                future = executor.submit(func, chunk, graph, filepath=fp) # If filepath is provided, walks are saved to that location
                 futures.append(future)
 
             for future in futures:
@@ -374,7 +374,7 @@ class Node2Vec:
         walks = []
 
         if self.verbose:
-            num_walks = tqdm.tqdm(range(num_walks), desc=f'Generating random walks - chunksize: {len(nodes)} walks: {num_walks} length: {walk_length}')
+            num_walks = tqdm.tqdm(range(num_walks), desc=f'Generating random walks | chunksize: {len(nodes)} | walks: {num_walks} | length: {walk_length}')
         else:
             num_walks = range(num_walks)
 

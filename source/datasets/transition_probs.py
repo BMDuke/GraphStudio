@@ -164,7 +164,7 @@ class TransitionProb(object):
             print(os_details, '\n')
 
 
-    def validate(self, n2v):
+    def validate(self, n2v=None):
         '''
         This function runs some tests designed to validate the graph.
         It tests whether all first and second degree edges have been 
@@ -212,7 +212,7 @@ class TransitionProb(object):
             
             
 
-    def head(self, n2v):
+    def head(self, n2v=None):
         '''
         This function attempts to provide standard 'head' functionality as is 
         comonly used with tabular data to the n2v graph. This isnt a perfect match
