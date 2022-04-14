@@ -1,5 +1,9 @@
 import os
 import random
+import time
+
+import psutil
+import gc
 
 import networkx as nx
 from prettytable import PrettyTable
@@ -40,7 +44,7 @@ class TransitionProb(object):
     source_dir = 'data/processed/biogrid'
     destination_dir = 'data/processed/transition_probs'
 
-    graph_format = 'json'
+    graph_format = 'pickle'
 
 
     def __init__(self, config, debug=False, verbose=True):
@@ -92,7 +96,7 @@ class TransitionProb(object):
         edge_list = self._load_biogrid()
 
         # Create a new node2vec instance from the edge list
-        n2v = Node2Vec(edge_list=edge_list, is_directed=True)
+        n2v = Node2Vec(edge_list=edge_list, is_directed=False)
         n2v.set(p=p, q=q)
         if self.verbose:
             print("Number of nodes: ", nx.number_of_nodes(n2v.graph))
@@ -100,7 +104,7 @@ class TransitionProb(object):
 
         # Process the weights
         n2v.process_weights()
-
+        
         # Save the results
         self._save_n2v_graph(n2v)
 
@@ -218,7 +222,7 @@ class TransitionProb(object):
         comonly used with tabular data to the n2v graph. This isnt a perfect match
         although it adequately describes the significant information for the project. 
         '''
-        
+
         if not n2v:
             n2v = self._load_n2v_graph()
 
@@ -259,7 +263,7 @@ class TransitionProb(object):
 
         biogrid = BioGrid(config, verbose=False)
 
-        data = biogrid._load_ppi().applymap(str) # _load_ppi returns pandas DF
+        data = biogrid._load_ppi().applymap(int) # _load_ppi returns pandas DF
 
         return data.values.tolist()
 
@@ -392,4 +396,18 @@ if __name__ == "__main__":
     tp.head(n2v)
     tp.describe(n2v)
     tp.validate(n2v)
-    
+
+    # print("AVAILABLE MEMORY: ",psutil.virtual_memory().available / (1024**3), 'GB')    
+    # n2v = tp._load_n2v_graph()
+    # print("AVAILABLE MEMORY: ",psutil.virtual_memory().available / (1024**3), 'GB')
+    # gc.collect()
+    # time.sleep(20)
+    # print("AVAILABLE MEMORY: ",psutil.virtual_memory().available / (1024**3), 'GB')
+    # print("AVAILABLE MEMORY: ",psutil.virtual_memory().available / (1024**3), 'GB')
+    # print("AVAILABLE MEMORY: ",psutil.virtual_memory().available / (1024**3), 'GB')
+    # print('GARBAGE COLLECTING...')
+    # gc.collect()
+    # print("AVAILABLE MEMORY: ",psutil.virtual_memory().available / (1024**3), 'GB')
+    # print('GRAPH NODES: ', nx.number_of_nodes(n2v.graph))
+    # print('GRAPH EDGES: ', nx.number_of_edges(n2v.graph))
+    # print('NODE DTYPE: ', int if isinstance(list(n2v.graph.nodes)[0], int) else type(list(n2v.graph.nodes)[0]))

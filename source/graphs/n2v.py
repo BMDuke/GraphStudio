@@ -95,6 +95,7 @@ class Node2Vec:
          - gml
          - graphml
          - pickle
+         - json
 
         Filepath must not have a suffix eg. not data/graph/d56fu8.csv
         '''
@@ -126,6 +127,7 @@ class Node2Vec:
          - gml
          - graphml
          - pickle
+         - json
 
         Filepath must not have a suffix eg. not data/graph/d56fu8.csv
         '''
@@ -252,6 +254,8 @@ class Node2Vec:
         else: 
             nodes = graph.nodes
 
+        num_triplets = 0
+
         # Calculate transition probabilities
         for source in nodes:
             
@@ -264,6 +268,8 @@ class Node2Vec:
                 unnormalised_transition_probabilities = {}
 
                 for destination in second_degree_neighbours:
+
+                    num_triplets += 1
 
                     weight = graph[neighbour][destination].get('weight')
                     weight = float(weight)
@@ -286,9 +292,13 @@ class Node2Vec:
 
                 for key, value in unnormalised_transition_probabilities.items():
                     normalised_transition_probabilities[key] = value / normalising_constant
+                    # graph[source][neighbour][key] = value / normalising_constant      
 
                 key = self.second_order_key
                 graph[source][neighbour][key] = normalised_transition_probabilities  
+
+        if self.verbose:
+            print(f'Number of triplets: {num_triplets}')
 
         return graph       
 
@@ -317,29 +327,38 @@ class Node2Vec:
         # Split the nodes into chunks
         num_cpus = multiprocessing.cpu_count()
         nodes = graph.nodes
-        chunksize = ceil(len(nodes) / (num_cpus * 100) )
+        # chunksize = ceil(len(nodes) / (num_cpus * 100) )
+        chunksize = 100
         chunks = self._make_chunks(chunksize, nodes)
 
         # Process the chunks
         func = self._sample # Function to be applied to the graph (makes walks)
         walks = []
 
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            
-            futures = []
+        if self.verbose:
+            chunks = tqdm.tqdm(chunks)
+            print(f'Generating random walks | chunksize: {chunksize} | walks: {self.num_walks} | length: {self.walk_length}')
 
-            for i, chunk in enumerate(chunks):
-                fp = None
-                if filepath:
-                    fp = os.path.join(temp_dir, str(i))
-                future = executor.submit(func, chunk, graph, filepath=fp) # If filepath is provided, walks are saved to that location
-                futures.append(future)
+        results = []
 
-            for future in futures:
-                walks.extend(future.result())    
+        for i, chunk in enumerate(list(chunks)):
+            fp = None
+            if filepath:
+                fp = os.path.join(temp_dir, str(i))
+
+            process = multiprocessing.Process(target=func, args=(chunk, graph), kwargs={'filepath':fp})
+            process.start() # Start the parallel excecution
+
+            results.append(process)
+        
+        for result in results:
+            result.join() # Close the parallel excecution
+
 
         # Combine results if filepath provided
         if filepath:
+            if self.verbose:
+                print('Combining results and cleaning up...')
             self._combine_results(temp_dir, result_fp)
             self._cleanup(temp_dir)
 
@@ -373,12 +392,7 @@ class Node2Vec:
 
         walks = []
 
-        if self.verbose:
-            num_walks = tqdm.tqdm(range(num_walks), desc=f'Generating random walks | chunksize: {len(nodes)} | walks: {num_walks} | length: {walk_length}')
-        else:
-            num_walks = range(num_walks)
-
-        for _ in num_walks:
+        for _ in range(num_walks):
 
             random.shuffle(nodes)
 
@@ -405,9 +419,9 @@ class Node2Vec:
 
                     for key, value in second_order_probs.items():
                         neighbors.append(key)
-                        probabilities.append(value)
+                        probabilities.append(value)                       
 
-                    if len(neighbors) == 0:
+                    if len(neighbors) == 0: # This is a fragile bit of code is current node is source nodes only neighbour
                         continue
 
                     next_node = random.choices(neighbors, weights=probabilities, k=1)[0]
@@ -489,6 +503,7 @@ class Node2Vec:
 
             with open(filepath, 'w') as json_out:
                 json.dump(json_data, json_out, indent=4)
+                # json.dump(nx.readwrite.json_graph.node_link_data(graph), json_out, indent=4)
 
         except Exception as e:
 

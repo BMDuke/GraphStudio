@@ -43,7 +43,7 @@ class Walk(object):
     source_dir = 'data/processed/transition_probs'
     destination_dir = 'data/processed/walks'
 
-    graph_format = 'json'
+    graph_format = 'pickle'
 
 
     def __init__(self, config, debug=False, verbose=True):
@@ -249,7 +249,7 @@ class Walk(object):
 
         destination = self._make_filepath('transition', ext=False)           
 
-        n2v = Node2Vec()
+        n2v = Node2Vec(verbose=self.verbose)
         n2v.load(destination, format=self.graph_format)     
 
         return n2v
