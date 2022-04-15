@@ -9,7 +9,7 @@ import shutil
 import numpy as np
 import pandas as pd
 
-from source.datasets.msig import MSig
+from source.etl.msig import MSig
 from source.utils.config import Config
 from source.utils.archive import Archive
 

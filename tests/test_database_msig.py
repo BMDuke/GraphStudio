@@ -4,7 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from source.datasets.msig import MSig
+from source.etl.msig import MSig
 
 # Configure unittest
 unittest.TestLoader.sortTestMethodsUsing = None

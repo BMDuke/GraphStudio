@@ -6,7 +6,7 @@ import itertools
 import time
 import psutil
 
-from source.datasets.transition_probs import TransitionProb
+from source.etl.transition_probs import TransitionProb
 from source.utils.config import Config
 
 def do(n, g, fp):

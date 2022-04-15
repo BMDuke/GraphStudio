@@ -5,8 +5,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from source.datasets.biogrid import BioGrid
-from source.datasets.msig import MSig
+from source.etl.biogrid import BioGrid
+from source.etl.msig import MSig
 from source.utils.config import Config
 
 # Configure unittest

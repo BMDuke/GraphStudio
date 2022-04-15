@@ -9,7 +9,7 @@ import networkx as nx
 from prettytable import PrettyTable
 
 from source.graphs.n2v import Node2Vec
-from source.datasets.biogrid import BioGrid
+from source.etl.biogrid import BioGrid
 from source.utils.config import Config
 from source.utils.archive import Archive
 
