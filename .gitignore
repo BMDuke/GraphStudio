@@ -4,6 +4,10 @@
 # All pycache files
 *__pycache__*
 
+# All project cache files
+cache/networkx/*
+cache/tensorflow/*
+
 # All Downloaded and transformed data
 data/raw/*.txt
 data/raw/*.gmt

@@ -441,7 +441,7 @@ class Walk(object):
         elif resource == 'transition':
             uuid = archive.make_id('transition', 'version', 'p', 'q')
         elif resource == 'walk':
-            uuid = archive.make_id('transition', 'version', 'p', 'q', 'num_walks', 'walk_length', add_to_lookup=add_to_lookup)
+            uuid = archive.make_id('walk', 'version', 'p', 'q', 'num_walks', 'walk_length', add_to_lookup=add_to_lookup)
         else:
             raise ValueError(f"Resource unrecognised: {resource}. Options: ['biogrid', 'transition']")
 
