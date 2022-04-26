@@ -29,15 +29,13 @@ class TextDataset(object):
     will be fed into the model. 
 
     Public API:
-     - 
+     - create_skipgram_dataset()        This loads random walks from the n2v
+                                        graph and converts them into a skipgram
+                                        dataset used to train an embedding model
+     - data()                           Returns a tuned TFRecord dataset object
+                                        which can be fed directly to a model
+     - text_vectorizer()                Returns 
 
-
-    Skipgram tf.train.Example format:
-    {
-        "positive_skipgram": _int_64_feature,
-        "negative_skipgram": _int_64_feature,
-        "label": _int_64_feature
-    }
     '''
 
     cache = 'cache/tensorflow'
