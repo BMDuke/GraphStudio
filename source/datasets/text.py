@@ -13,6 +13,8 @@ import pandas as pd
 class TextDataset(object):
 
     '''
+    Note: Docstrings out of date
+
     This class contains functions to create, save, load and manage
     text datasets. We are representing the random walks from the 
     node2vec graph as sentences, where nodes represent words, and 
@@ -34,7 +36,7 @@ class TextDataset(object):
                                         dataset used to train an embedding model
      - data()                           Returns a tuned TFRecord dataset object
                                         which can be fed directly to a model
-     - text_vectorizer()                Returns 
+     - text_vectorizer()                Returns the text vectorisation layer
 
     '''
 

@@ -175,7 +175,7 @@ class Walk(object):
         memory_table = PrettyTable()
         memory_header = ['Disk - GB', 'Virtual - GB']
         memory_table.field_names = memory_header
-        memory_table.add_row([memory, size])        
+        memory_table.add_row([size, memory])        
 
         # Table
         table_table = PrettyTable()

@@ -283,6 +283,13 @@ class MSig(object):
         }       
 
         return data
+    
+    def _get_destination(self):
+        '''
+        Return the filepath of the outfile
+        '''
+
+        return os.path.join(self.PROCESSED_DIR, self.OUT_FILENAME)
 
 
         
@@ -290,11 +297,11 @@ class MSig(object):
 
 if __name__ == "__main__":
     msig = MSig('config', debug=False)
-    gmt = msig.process()  # PASSED
+    # gmt = msig.process()  # PASSED
     # print(gmt)    # PASSED
     # df = msig._load_msig()    # PASSED
     # print(df) # PASSED
     msig.describe()   # PASSED
     # t = msig.validate()   # PASSED
     # print(t)    # PASSED
-    msig.head()
+    # msig.head()

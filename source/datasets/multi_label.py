@@ -20,22 +20,20 @@ class MultiLabelDataset(object):
 
 
     Public API:
-     - 
-
-    > convert list to table
-    > convert table to list
-    > save
-    > load
-    > 
-
-    ✓ encode_example
-    ✓ decode_example
-    ✓ create_dataset
-    ✓ create_encoder
-    ✓ _save_dataset
-    ✓ _serialise_example
-    ✓ _deserialise_example
-    ✓ data
+     - create_dataset()         This takes a list of tuples of labelled objects
+                                (object_id, [label_1,  ..., label_n]) and comverts 
+                                it into a multihot encoded tf dataset
+     - create_encoder()         This generates the encoder which multi-hot-encodes
+                                the labels of examples. It creates the decoder as a 
+                                side effect.
+     - encode_example()         This multi-hot-encodes a single example
+     - decode_example()         This converts an encoded example back into class labels
+     - save_dataset()           This saved a dataset as a tfrecords dataset
+     - data()                   This (loads and) returns a tfrecords dataset of
+                                {
+                                    x: object id,
+                                    y: multi-hot encoding
+                                }
 
     '''
 
@@ -87,6 +85,12 @@ class MultiLabelDataset(object):
     
     def create_encoder(self, pairs):
         '''
+        This takes the list of labelled objects [(label, object_id),...]
+        and generates an encoder which multi-hot encodes a set of labels.
+        ie. [label_0, label_3] => [1,0,0,1,0].
+
+        This also creates a decoder as a side effect based on the vocabulary of the 
+        encoder
         '''
 
         # Extract and sort labels to get consistent encoder
@@ -124,11 +128,11 @@ class MultiLabelDataset(object):
     
     def decode_example(self, example):
         '''
-        Assumes example is {'id': 'y': Tensor}
+        Assumes example is {x: 'id', 'y': Tensor}
         '''
        
         if len(example) > 2:
-            raise ValueError(example, 'Length > 1. Can only encode single examples')
+            raise ValueError(example, 'Length > 2. Can only dencode single examples')
 
         x = example['x']
         y = example['y']
@@ -142,20 +146,35 @@ class MultiLabelDataset(object):
     
     def save_dataset(self, dataset, filepath):
         '''
+        This function write a TF dataset out to disk as a TFRecords dataset
         '''
 
-        with tf.io.TFRecordWriter(filepath) as file_writer:
+        try:
+            
+            with tf.io.TFRecordWriter(filepath) as file_writer:
 
-            for record in tqdm.tqdm(dataset):
+                for record in tqdm.tqdm(dataset):
 
-                proto = self._serialize_example(record)
+                    proto = self._serialize_example(record)
 
-                file_writer.write(proto)
+                    file_writer.write(proto)
+        
+        except Exception as e:
 
-    def data(self):
+            print(f'ERROR: {e}')
+            raise
+
+    def data(self, filepath=None):
         '''
+        This loads a TFRecords dataset and returns it to the user
         '''
 
+        if filepath is None:
+            if self.filepath is None:
+                raise ValueError('Multilabelled gene dataset not provided')
+            else:
+                filepath = self.filepath
+                
         dataset = tf.data.TFRecordDataset([self.filepath])
         
         dataset = dataset.map(self._deserialize_example, num_parallel_calls=tf.data.AUTOTUNE)
@@ -166,7 +185,11 @@ class MultiLabelDataset(object):
     
     def _create_decoder(self, encoder):
         '''
-        The nested function assumes example is {id:[label1, label2]}
+        This creates the corresponding decoder for the encoder that is
+        created above. It indexes the vocabulary that is created by the 
+        multi-hot encoder and returns the values of the matching labels. 
+        
+        This encloses the vocabulary in a function and returns the function. 
         '''
 
         vocab = encoder.get_vocabulary()
@@ -179,7 +202,11 @@ class MultiLabelDataset(object):
 
     def _group_by_identifier(self, pairs):
         '''
-        Assumes [label, identifier] order
+        Assumes [label, identifier] order and returns a dict of 
+        {
+            identifier: ...,
+            labels: [label_1, ..., label_n]
+        }
         '''
 
         group = {}
@@ -211,6 +238,8 @@ class MultiLabelDataset(object):
     
     def _deserialize_example(self, example):
         '''
+        This deserialises an example proto from a tfrecord file and returns the 
+        example as an (x, y) tuple
         '''
 
         description = {
