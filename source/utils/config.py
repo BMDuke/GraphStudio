@@ -276,6 +276,50 @@ class Config(object):
         del current_conf[model]["experiments"][name]
 
         _ = self._save(current, current_conf)
+
+    def get_current(self, item):
+        '''
+        This returns a dictionary of the given item
+        - item:     'data' | 'skipgram' | 'binary_classifier' 
+                    'multi_label' 
+                    
+                    data: biogrid version
+                    skipgram: all data parameters to make skipgrams
+                        p, q, num_walks, walk_length, window_size ...
+                    binary_classifier: encoder, model etc...
+                    multi_label: encoder, model etc...
+        '''
+
+        current = self.current() # name of the current config
+        current_conf = self._load(current) # the current config  
+
+        # Define a mapping between project asset and config parameters
+        mapping = {
+            'data': ['data:version'],
+            'skipgram': ['data:version', 'data:current'],
+            'node2vec': ['node2vec:current'],
+            'binary_classifier': ['binaryClassifier:current'],
+            'multi_label': ['multiLabelClassifier:current']
+        }
+
+        assert item in mapping.keys(), f'ERROR: item: {item} not found in config keys'
+
+        # Get keys to return 
+        keys = mapping[item]
+
+        # Loop through and get values
+        config = {}
+        for key in keys:
+            asset, parameter = key.split(':')
+            if parameter == 'version':
+                config[parameter] = current_conf[asset][parameter]
+            elif parameter == 'current':
+                current = current_conf[asset][parameter]
+                values =  current_conf[asset]['experiments'][current]
+                for k, v in values.items():
+                    config[k] = v
+        
+        return config
    
     def _load(self, name):
         

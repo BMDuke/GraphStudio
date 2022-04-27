@@ -3,6 +3,8 @@ import hashlib
 
 import pandas as pd
 
+from source.utils.config import Config
+
 class Archive(object):
     '''
     This manages the look ups for the storage and retrieval 
@@ -21,7 +23,7 @@ class Archive(object):
 
     hash_length = 7
 
-    def __init__(self, config, lookup_fp=None, alt_dir=None):
+    def __init__(self, config, lookup_fp=None, alt_dir=None, prune_file=True):
         self.config = config
         self.lookup_fp = lookup_fp # Used to create seperate lookup for testing
 
@@ -29,7 +31,7 @@ class Archive(object):
             self.data_dir = alt_dir # Use alternative data directory if specified. 
 
         self._init_lookup()
-        self._prune_lookup()
+        self._prune_lookup(prune_file=prune_file)
 
     def make_id(self, type, *params, add_to_lookup=False):
         '''
@@ -158,12 +160,18 @@ class Archive(object):
         self._save_lookup(lookup)
 
 
-    def _prune_lookup(self):
+    def _prune_lookup(self, prune_file=True):
         '''
         Get all identifiers of processed datasets. Remove any which are not 
         present in the lookup table. This means they have been deleted 
         by the user.
         '''
+
+        # Select predicate
+        if prune_file:
+            predicate = lambda x: x.is_file()
+        else:
+            predicate = lambda x: x.is_dir()
 
         lookup = self._load_lookup()
         
@@ -175,7 +183,7 @@ class Archive(object):
         for d in dirs:
             with os.scandir(d) as directory:
                 for item in directory:
-                    if item.is_file():
+                    if predicate(item):
                         id = item.name.split('.')[0]
                         ids.append(id)
         
@@ -247,11 +255,148 @@ class Archive(object):
             return os.path.join(self.data_dir, self.filename)
 
 
+class ModelArchive(Archive):
+
+    '''
+    The main difference between this class and the base Archive class is that 
+    the base archive class provides the option to generate ids at various hierarchies
+    such as [verion], [version, p, q], [version, p, q, ...] where each level of 
+    the hierarchy is a superset of the previous. This allows you to create hierarchies
+    of dependencies amoung data assets. 
+        The ModelArchive class, however, has a flat information structure. There are a 
+    given number of fields [model, dataset, encoder, ...] which may or may not be 
+    present, but in every case the final hash is a result of all those values. 
+    '''
+
+    # Class attrs
+    location = 'cache/tensorflow'
+    columns = ['id', 'model', 'dataset', 'encoder', 'architecture', 
+                'embedding_dim', 'split', 'epochs']
+    missing_value = None
+
+    def __init__(self, dir=None):
+
+        if dir is None:
+            dir = self.location
+        
+        self.config = Config()
+
+        super().__init__(self.config, alt_dir=dir, prune_file=False)
+
+    def make_id(self, model, dataset, add_to_lookup=False):
+        '''
+        Creates a hash ID based on parameter values. 
+        Optionally adds it to the lookup table.
+        '''
+        id = self._make_hash(model, dataset)
+
+        if add_to_lookup:
+
+            params = self.config.get_current(model)
+
+            self._add_to_lookup(id, model, dataset, params)
+        
+        return id
+    
+    def _init_lookup(self, columns=None):
+        '''
+        If the lookup table hasnt been created yet, make it.
+        - columns:      List of column names that should be used to create 
+                        the table
+        '''
+
+        if columns is None:
+            columns = self.columns
+
+        filepath = self._get_lookup_filepath()
+
+        try:
+
+            if not os.path.exists(filepath):
+                df = pd.DataFrame(columns=columns)
+                self._save_lookup(df)
+        
+        except Exception as e:
+
+            print(f"ERROR: {e}")
+    
+    def _add_to_lookup(self, id, model, dataset, params):
+        '''
+        Add an item to the lookup table. Id is a hash of param values 
+        created by _make_hash. model is the type of asset being created.
+        params is a dict of parameter values
+        '''    
+        lookup = self._load_lookup()
+
+        row = self._make_row(id, model, dataset, params)
+        
+        lookup.loc[ len(lookup.index) ] = row       # Add row to bottom of table
+
+        self._save_lookup(lookup)
+    
+    def _make_row(self, id, model, dataset, params):
+        '''
+        This parses a params dictionary in a specified order providing 
+        default values in the case where no value is provided and returns
+        a row as a list which can be written to file.
+        '''
+
+        row = [id, model, dataset] # These are values which are not obtained from config 
+
+        for column in self.columns[3:]:
+            value = params.get(column, self.missing_value)
+            row.append(value)
+        
+        return row
+
+    def _make_hash(self, model, dataset):
+        '''
+        This takes the names of the parameters that are used to 
+        define the various datasets as arguments. It then uses
+        the names as keys to retrieve the values from the config 
+        file. The values are then used to make the hash
+
+        - model:        This is the type of model that is being 
+                        archived, 'node2vec, 'binary_classifier'
+                        etc...
+        - dataset:      This is the id of the data asset used 
+
+        It uses the current values specified in the config file to make
+        the hash
+        '''
+
+        # Initialise the hash
+        hash_master = hashlib.shake_128()
+        hash_length = self.hash_length
+        b = lambda x: bytes(str(x), 'utf-8')
+
+        # Get the relevant config details and target params
+        config = self.config.get_current(model)
+        params = self.columns[3:]
+
+        # Hash model type and dataset ID
+        hash_master.update(b(model))
+        hash_master.update(b(dataset))
+
+        # Hash values from config
+        for param in params:
+            value = config.get(param, self.missing_value)
+            hash_master.update(b(value))
+        
+        return hash_master.hexdigest(hash_length)
+        
 
     
 if __name__ == "__main__":
     archive = Archive('c')
     # archive._prune_lookup()
+    config = Config()
+
+    model_archive = ModelArchive()
+    # model_archive.make_id('binary_classifier', '87c87ebk7', add_to_lookup=True)
+    # model_archive.make_id('node2vec', '87c87ebk7', add_to_lookup=True)
+    # model_archive.make_id('multi_label', '87c87ebk7', add_to_lookup=True)
+    # print(model_archive._load_lookup())
     pass
 
      

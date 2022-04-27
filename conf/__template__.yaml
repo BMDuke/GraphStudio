@@ -15,7 +15,7 @@ data:
 
 
 node2vec: 
-  current: defualt
+  current: default
   experiments:
     default: 
       embedding_dim: 128
@@ -27,7 +27,7 @@ multiLabelClassifier:
   experiments:
     default:
       encoder: default
-      model: null
+      architecture: default
       epochs: 20
       split: .8
 
@@ -37,7 +37,7 @@ binaryClassifier:
   experiments:
     default:
       encoder: default
-      model: null
+      architecture: default
       epochs: 20
       split: .8
 
