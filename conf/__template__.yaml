@@ -18,6 +18,8 @@ node2vec:
   current: default
   experiments:
     default: 
+      architecture: default   # This is a node2vec implementation
+      data: default           # This is a data experiment definition as defined in config
       embedding_dim: 128
       epochs: 20
 
@@ -26,8 +28,8 @@ multiLabelClassifier:
   current: default
   experiments:
     default:
-      encoder: default
-      architecture: default
+      encoder: default       # This is a node2vec experiment definition as defined in config
+      architecture: default   
       epochs: 20
       split: .8
 
@@ -36,7 +38,7 @@ binaryClassifier:
   current: default
   experiments:
     default:
-      encoder: default
+      encoder: default      # This is a node2vec experiment definition as defined in config
       architecture: default
       epochs: 20
       split: .8

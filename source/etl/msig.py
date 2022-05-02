@@ -291,6 +291,15 @@ class MSig(object):
 
         return os.path.join(self.PROCESSED_DIR, self.OUT_FILENAME)
 
+    def _get_labels(self, pairs):
+        '''
+        '''
+        labels = [label for label, _ in pairs]
+        labels = set(labels)
+        labels = sorted(labels)
+
+        return labels        
+
 
         
 

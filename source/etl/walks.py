@@ -455,8 +455,8 @@ class Walk(object):
 if __name__ == "__main__":
     config = Config()
     walk = Walk(config, debug=False)
-    sample = walk.process()
-    print(sample)
+    # sample = walk.process()
+    # print(sample)
     # walk.describe()
-    walk.validate() 
-    walk.head()
+    # walk.validate() 
+    # walk.head()

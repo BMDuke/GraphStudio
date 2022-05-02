@@ -98,7 +98,7 @@ class BioGrid(object):
         num_interactions = len(ppi.index)
         unique_a = pd.unique(ppi[self.interactor_a]).size
         unique_b = pd.unique(ppi[self.interactor_b]).size
-        unique_total = pd.unique(np.concatenate((ppi[self.interactor_b], ppi[self.interactor_b]))).size
+        unique_total = pd.unique(np.concatenate((ppi[self.interactor_a], ppi[self.interactor_b]))).size
         ppi_summary.add_row([num_interactions, unique_a, unique_b, unique_total])
 
         summary = ['Count', 'Mean', 'Std', 'Min', 'Max']
@@ -371,7 +371,7 @@ class BioGrid(object):
 if __name__ == "__main__":
     config = Config()
     msig = BioGrid(config, debug=False)
-    msig.process()
-    msig.head()
+    # msig.process()
+    # msig.head()
     msig.describe()
     

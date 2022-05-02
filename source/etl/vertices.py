@@ -7,11 +7,11 @@ from pathlib import Path
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 from prettytable import PrettyTable
-import tensorflow_data_validation as tfdv
 import numpy as np
 
 from source.utils.config import Config
 from source.utils.archive import Archive
+from source.utils.validation import validate_dataset_slower
 from source.etl.msig import MSig
 from source.datasets.multi_label import MultiLabelDataset
 
@@ -103,7 +103,10 @@ class Vertices(object):
         assert os.path.exists(vertices_fp), f'ERROR: Resource not found: {vertices_fp} \nHave you processed the multilabelled data?'        
 
         # Load the data
-        multilabel = MultiLabelDataset(filepath=vertices_fp)
+        msig = MSig(self.config)
+        pairs = msig._load_msig()        
+        num_labels = len(msig._get_labels(pairs.values))
+        multilabel = MultiLabelDataset(filepath=vertices_fp, num_labels=num_labels)
         data = multilabel.data()
 
         # Number of genes
@@ -111,12 +114,11 @@ class Vertices(object):
 
         # Number of labels
         for example in data.unbatch().take(1):
-            print(example[1])
             labels = example[1]
             number_of_labels = len(labels)
 
         # Number of labels per gene
-        counts = {gene.numpy(): np.sum(labels.numpy()) for gene, labels in data.unbatch()}
+        counts = {gene.numpy()[0]: np.sum(labels.numpy()) for gene, labels in data.unbatch()}
         labels_per_gene = {}
         for gene, num_labels in counts.items():
             if num_labels in labels_per_gene.keys():
@@ -174,9 +176,30 @@ class Vertices(object):
 
     def validate(self):
         '''
+        Things to validate
+        > Intengrity of crc        
         '''
-        # Check resource exists        
-        # Schema validation
+
+        # Check resource exists
+        vertices_fp = os.path.join(self.base_dir, 'vertices', self.out_file)
+
+        assert os.path.exists(vertices_fp), f'ERROR: Resource not found: {vertices_fp} \nHave you processed the multilabelled data?'                
+
+        # CRC check
+        total_records, total_bad_len_crc, total_bad_data_crc = validate_dataset_slower([vertices_fp], verbose=False)        
+
+        ## Make the tables
+        # Corruption
+        corruption_table = PrettyTable()
+        corruption_header = ['Total Records', 'Corrupted Length', 'Corrupted Data']
+        corruption_table.field_names = corruption_header
+        corruption_table.add_row([total_records, total_bad_len_crc, total_bad_data_crc])
+
+        # Print tables
+        if self.verbose:
+            print(f'\nNumber of corrupted TFRecords:')
+            print(corruption_table)
+
 
         
 
@@ -191,7 +214,10 @@ class Vertices(object):
         assert os.path.exists(vertices_fp), f'ERROR: Resource not found: {vertices_fp} \nHave you processed the multilabelled data?'        
 
         # Load the data
-        multilabel = MultiLabelDataset(filepath=vertices_fp)
+        msig = MSig(self.config)
+        pairs = msig._load_msig()        
+        num_labels = len(msig._get_labels(pairs.values))
+        multilabel = MultiLabelDataset(filepath=vertices_fp, num_labels=num_labels)
         data = multilabel.data()
 
         # Print the first n examples
@@ -210,5 +236,6 @@ if __name__ == "__main__":
     vertices = Vertices(conf)
     # data = vertices.process()
     # vertices.describe()
+    # vertices.validate()
     vertices.head()
     # print(data)

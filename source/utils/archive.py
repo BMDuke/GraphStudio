@@ -255,6 +255,18 @@ class Archive(object):
             return os.path.join(self.data_dir, self.filename)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 class ModelArchive(Archive):
 
     '''
@@ -266,12 +278,22 @@ class ModelArchive(Archive):
         The ModelArchive class, however, has a flat information structure. There are a 
     given number of fields [model, dataset, encoder, ...] which may or may not be 
     present, but in every case the final hash is a result of all those values. 
+        One important detail of the ModelArchive class is that any model which uses trained
+    weights from a node2vec model, is indirectly dependent on the following parameters:
+
+    version, p, q, num_walks, walk_length, negative_samples, window_size, node2vec:encoder,
+    node2vec:embedding_dim, node2vec:epochs 
+    
+    - which is a lot. Therefore, to simplify this dependency, the argument tranfer_id 
+    is provided which is the uuid of a given node2vec trained model instance. When training
+    a node2vec instance, transfer_id = None
     '''
 
     # Class attrs
     location = 'cache/tensorflow'
-    columns = ['id', 'model', 'dataset', 'encoder', 'architecture', 
+    columns = ['id', 'model', 'dataset', 'transfer_id', 'encoder', 'architecture', 
                 'embedding_dim', 'split', 'epochs']
+    column_offset = 4           # id + number of user provided values ^ user provides: model, dataset, transfer_id 
     missing_value = None
 
     def __init__(self, dir=None):
@@ -283,18 +305,23 @@ class ModelArchive(Archive):
 
         super().__init__(self.config, alt_dir=dir, prune_file=False)
 
-    def make_id(self, model, dataset, add_to_lookup=False):
+    def make_id(self, model, experiment, dataset, transfer_id, add_to_lookup=False):
         '''
         Creates a hash ID based on parameter values. 
         Optionally adds it to the lookup table.
         '''
-        id = self._make_hash(model, dataset)
+
+        accepted_args = ['node2vec', 'binary_classifier', 'multi_label']
+
+        assert model in accepted_args, f'ERROR: argument {model} not recognised, select from {accepted_args}'
+        
+        id = self._make_hash(model, experiment, dataset, transfer_id)
 
         if add_to_lookup:
 
-            params = self.config.get_current(model)
+            params = self.config.get_experiment(model)
 
-            self._add_to_lookup(id, model, dataset, params)
+            self._add_to_lookup(id, model, dataset, transfer_id, params)
         
         return id
     
@@ -320,7 +347,7 @@ class ModelArchive(Archive):
 
             print(f"ERROR: {e}")
     
-    def _add_to_lookup(self, id, model, dataset, params):
+    def _add_to_lookup(self, id, model, dataset, transfer_id, params):
         '''
         Add an item to the lookup table. Id is a hash of param values 
         created by _make_hash. model is the type of asset being created.
@@ -328,28 +355,29 @@ class ModelArchive(Archive):
         '''    
         lookup = self._load_lookup()
 
-        row = self._make_row(id, model, dataset, params)
+        row = self._make_row(id, model, dataset, transfer_id, params)
         
         lookup.loc[ len(lookup.index) ] = row       # Add row to bottom of table
 
         self._save_lookup(lookup)
     
-    def _make_row(self, id, model, dataset, params):
+    def _make_row(self, id, model, dataset, transfer_id, params):
         '''
         This parses a params dictionary in a specified order providing 
         default values in the case where no value is provided and returns
         a row as a list which can be written to file.
         '''
 
-        row = [id, model, dataset] # These are values which are not obtained from config 
+        row = [id, model, dataset, transfer_id] # These are values which are not obtained from config 
 
-        for column in self.columns[3:]:
+        offset = self.column_offset
+        for column in self.columns[offset:]:
             value = params.get(column, self.missing_value)
             row.append(value)
         
         return row
 
-    def _make_hash(self, model, dataset):
+    def _make_hash(self, model, experiment, dataset, transfer_id):
         '''
         This takes the names of the parameters that are used to 
         define the various datasets as arguments. It then uses
@@ -371,12 +399,14 @@ class ModelArchive(Archive):
         b = lambda x: bytes(str(x), 'utf-8')
 
         # Get the relevant config details and target params
-        config = self.config.get_current(model)
-        params = self.columns[3:]
+        config = self.config.get_experiment(model, experiment)
+        offset = self.column_offset
+        params = self.columns[offset:]
 
         # Hash model type and dataset ID
         hash_master.update(b(model))
         hash_master.update(b(dataset))
+        hash_master.update(b(transfer_id))
 
         # Hash values from config
         for param in params:
@@ -393,9 +423,12 @@ if __name__ == "__main__":
     config = Config()
 
     model_archive = ModelArchive()
-    # model_archive.make_id('binary_classifier', '87c87ebk7', add_to_lookup=True)
-    # model_archive.make_id('node2vec', '87c87ebk7', add_to_lookup=True)
-    # model_archive.make_id('multi_label', '87c87ebk7', add_to_lookup=True)
+
+    # transfer_id  = model_archive.make_id('node2vec', '87c87ebk7', None, add_to_lookup=True)
+    
+    # model_archive.make_id('binary_classifier', '87c87ebk7', transfer_id, add_to_lookup=True)
+    # model_archive.make_id('multi_label', '87c87ebk7', transfer_id, add_to_lookup=True)
+
     # print(model_archive._load_lookup())
     pass
 

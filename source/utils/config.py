@@ -277,49 +277,50 @@ class Config(object):
 
         _ = self._save(current, current_conf)
 
-    def get_current(self, item):
-        '''
-        This returns a dictionary of the given item
-        - item:     'data' | 'skipgram' | 'binary_classifier' 
-                    'multi_label' 
-                    
-                    data: biogrid version
-                    skipgram: all data parameters to make skipgrams
-                        p, q, num_walks, walk_length, window_size ...
-                    binary_classifier: encoder, model etc...
-                    multi_label: encoder, model etc...
-        '''
 
+    def get_experiment(self, asset, name='current'):
+        '''
+        This gets the config values for a given experiemnt.
+        asset:          This is the project asset requested
+                        data, node2vec, multi_label etc...
+        name:           This is the name of the experiment, 
+                        the default value is current
+        '''
         current = self.current() # name of the current config
-        current_conf = self._load(current) # the current config  
+        current_conf = self._load(current) # the current config          
 
-        # Define a mapping between project asset and config parameters
+        # Define a mapping between project asset and relevant config parameters
         mapping = {
             'data': ['data:version'],
-            'skipgram': ['data:version', 'data:current'],
-            'node2vec': ['node2vec:current'],
-            'binary_classifier': ['binaryClassifier:current'],
-            'multi_label': ['multiLabelClassifier:current']
-        }
+            'skipgram': ['data:version', f'data:{name}'],
+            'node2vec': [f'node2vec:{name}'],
+            'binary_classifier': [f'binaryClassifier:{name}'],
+            'multi_label': [f'multiLabelClassifier:{name}']
+        }  
 
-        assert item in mapping.keys(), f'ERROR: item: {item} not found in config keys'
+        assert asset in mapping.keys(), f'ERROR: item: {asset} not found in config keys'
 
         # Get keys to return 
-        keys = mapping[item]
+        keys = mapping[asset]
 
         # Loop through and get values
         config = {}
         for key in keys:
-            asset, parameter = key.split(':')
+            resource, parameter = key.split(':')
             if parameter == 'version':
-                config[parameter] = current_conf[asset][parameter]
+                config[parameter] = current_conf[resource][parameter]
             elif parameter == 'current':
-                current = current_conf[asset][parameter]
-                values =  current_conf[asset]['experiments'][current]
+                current = current_conf[resource][parameter]
+                values =  current_conf[resource]['experiments'][current]
+                for k, v in values.items():
+                    config[k] = v
+            else:
+                values =  current_conf[resource]['experiments'][parameter]
                 for k, v in values.items():
                     config[k] = v
         
-        return config
+        return config              
+
    
     def _load(self, name):
         

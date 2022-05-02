@@ -39,7 +39,7 @@ class MultiLabelDataset(object):
 
 
 
-    def __init__(self, pairs=None, filepath=None, verbose=True):
+    def __init__(self, pairs=None, filepath=None, num_labels=None, verbose=True):
         '''
         This takes either pairs or tables as initilisation arguments. 
         - pairs:            Individually labelled objects
@@ -52,6 +52,7 @@ class MultiLabelDataset(object):
 
         self.pairs = pairs
         self.filepath = filepath
+        self.num_labels = num_labels
         self.verbose = verbose
 
     def create_dataset(self, pairs=None):
@@ -94,9 +95,7 @@ class MultiLabelDataset(object):
         '''
 
         # Extract and sort labels to get consistent encoder
-        labels = [label for label, _ in pairs]
-        labels = set(labels)
-        labels = sorted(labels)
+        labels = self._get_labels(pairs)
 
         # Create encoder
         encoder = tf.keras.layers.StringLookup(output_mode='multi_hot', num_oov_indices=0)
@@ -241,6 +240,7 @@ class MultiLabelDataset(object):
         This deserialises an example proto from a tfrecord file and returns the 
         example as an (x, y) tuple
         '''
+        assert self.num_labels is not None, f'ERROR: label shape is \'None\' have you passed num_labels argument to MultiLabelDataset constructor?'
 
         description = {
             'x': tf.io.FixedLenFeature([], tf.string),
@@ -249,8 +249,10 @@ class MultiLabelDataset(object):
 
         example = tf.io.parse_single_example(example, description)
 
-        x = tf.io.parse_tensor(example['x'], out_type=tf.string)
-        y = tf.io.parse_tensor(example['y'], out_type=tf.float32) 
+        tensor_shape = (self.num_labels,)
+
+        x = tf.reshape(tf.io.parse_tensor(example['x'], out_type=tf.string), shape=(1,))
+        y = tf.reshape(tf.io.parse_tensor(example['y'], out_type=tf.float32), shape=tensor_shape)
 
         return (x, y)
 
@@ -265,8 +267,14 @@ class MultiLabelDataset(object):
 
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[serialized_tensor.numpy()]))        
 
+    def _get_labels(self, pairs):
+        '''
+        '''
+        labels = [label for label, _ in pairs]
+        labels = set(labels)
+        labels = sorted(labels)
 
-
+        return labels
 
 
 

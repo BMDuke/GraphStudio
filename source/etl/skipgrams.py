@@ -7,9 +7,10 @@ from pathlib import Path
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 from prettytable import PrettyTable
-import tensorflow_data_validation as tfdv
+import numpy as np
 
 from source.utils.config import Config
+from source.utils.validation import validate_dataset_slower
 from source.utils.archive import Archive
 from source.datasets.text import TextDataset
 
@@ -134,7 +135,7 @@ class Skipgrams(object):
 
         # Load the data
         walk_fp = ''
-        skipgrams = TextDataset(walk_fp, skipgram_fp).data()
+        skipgrams = TextDataset(walk_fp, skipgram_fp, negative_samples=negative_samples).data()
 
         # Get one example - requires drilling into batch
         for i in skipgrams.take(1): # This is a batch
@@ -189,30 +190,78 @@ class Skipgrams(object):
 
     def validate(self):
         '''
+        Things to validate
+        > Intengrity of crc
+        > Vocab size = num genes
+        > Deserialised data is same shape
         '''
 
+        # Get parameter values
+        negative_samples, _ = self._get_skipgram_values()             
+
         # Make the filepath and check it exists
+        walk_fp = self._make_filepath('walk', ext=True)
         skipgram_fp = self._make_filepath('skipgram')
 
+        assert os.path.exists(walk_fp), f'ERROR: resource not found:\n{walk_fp}'
         assert os.path.exists(skipgram_fp), f'ERROR: resource not found:\n{skipgram_fp}'
 
         # Load the data
-        walk_fp = ''
-        skipgrams = TextDataset(walk_fp, skipgram_fp).data()        
+        skipgrams = TextDataset(walk_fp, skipgram_fp, negative_samples=negative_samples)        
         
-        # Schema based example validation 
+        # CRC check
         if self.verbose:
-            print('Generating statistics')
-        stats = tfdv.generate_statistics_from_tfrecord(data_location=skipgram_fp)
+            print('validating:\t', skipgram_fp)
+        total_records, total_bad_len_crc, total_bad_data_crc = validate_dataset_slower([skipgram_fp], verbose=False)
+
+        # Check vocab size
+        vocab_size = len(skipgrams.text_vectorizer().get_vocabulary())
+        walks = skipgrams._load_walks_as_iterator(walk_fp)
+        unique_tokens = set()
+        for walk in walks:
+            data = walk.to_numpy()
+            for (x, y), value in np.ndenumerate(data):
+                if value not in unique_tokens:
+                    unique_tokens.add(value)
+
+        # Check tensor shape
+        for example in skipgrams.data().take(1): # This is a batch
+            target = example[0]['target']
+            context = example[0]['context']
+            label = example[1]
+
+        ## Make the tables
+        # Corruption
+        corruption_table = PrettyTable()
+        corruption_header = ['Total Records', 'Corrupted Length', 'Corrupted Data']
+        corruption_table.field_names = corruption_header
+        corruption_table.add_row([total_records, total_bad_len_crc, total_bad_data_crc])
+
+        # Vocab size
+        vocab_table = PrettyTable()
+        vocab_header = ['Expected vocab size', 'Actual vocab size']
+        vocab_table.field_names = vocab_header
+        vocab_table.add_row([vocab_size, len(unique_tokens) + 1])      
+
+        # Tensor shapes
+        tensor_table = PrettyTable()
+        tensor_header = ['Tensor', 'Expected Shape', 'Actual Shape']
+        tensor_table.field_names = tensor_header
+        tensor_table.add_row(['Target', (1,), target.shape])
+        tensor_table.add_row(['Context', (negative_samples+1,), context.shape])         
+        tensor_table.add_row(['Label', (negative_samples+1,), label.shape])           
+
+        # Print tables
         if self.verbose:
-            print('Inferring schema')        
-        schema = tfdv.infer_schema(stats)
-        options = tfdv.StatsOptions(schema=schema)
-        if self.verbose:
-            print('Looking for anomolies')        
-        anomalous_example_stats = tfdv.validate_examples_in_tfrecord(
-            data_location=skipgram_fp, stats_options=options)
-        print(anomalous_example_stats)
+            print(f'\nNumber of corrupted TFRecords:')
+            print(corruption_table)
+            print(f'\nVocab size:')
+            print(vocab_table)
+            print(f'\nTensor Sizes:')
+            print(tensor_table)            
+        
+
+
         
 
     def head(self, n=5):
@@ -220,6 +269,9 @@ class Skipgrams(object):
         Print 1 batch and the top n examples
         '''
 
+        # Get parameter values
+        negative_samples, _ = self._get_skipgram_values()     
+
         # Make the filepath and check it exists
         skipgram_fp = self._make_filepath('skipgram')
 
@@ -227,7 +279,7 @@ class Skipgrams(object):
 
         # Load the data
         walk_fp = ''
-        skipgrams = TextDataset(walk_fp, skipgram_fp).data()        
+        skipgrams = TextDataset(walk_fp, skipgram_fp, negative_samples=negative_samples).data()        
         
         # Print batch top n examples
         for example in skipgrams.take(1): # This is a batch
@@ -393,5 +445,5 @@ if __name__ == "__main__":
     skipgrams = Skipgrams(conf)
     # skipgrams.process()
     # skipgrams.describe()
-    skipgrams.validate()
-    # skipgrams.head()
+    # skipgrams.validate()
+    skipgrams.head()
