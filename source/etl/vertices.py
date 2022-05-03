@@ -55,7 +55,7 @@ class Vertices(object):
         self.verbose = verbose
 
 
-    def process(self):
+    def process(self, experiment=None):
         '''
         This function reads in the labelled gene ids, which are output by the MSig class
         and transforms them into a tf Dataset where x is the gene id and y is a 
@@ -90,7 +90,7 @@ class Vertices(object):
         
 
 
-    def describe(self):
+    def describe(self, experiment=None):
         '''
         This fucntions provides a description and an example of the data asset that we
         are creating. The number of genes, labels annd number of labels per gene should
@@ -174,7 +174,7 @@ class Vertices(object):
 
 
 
-    def validate(self):
+    def validate(self, experiment=None):
         '''
         Things to validate
         > Intengrity of crc        
@@ -203,7 +203,7 @@ class Vertices(object):
 
         
 
-    def head(self, n=5):
+    def head(self, nrows=5, experiment=None):
         '''
         Print the first n examples from the dataset
         '''
@@ -222,7 +222,7 @@ class Vertices(object):
 
         # Print the first n examples
         if self.verbose:
-            for x, y in data.unbatch().take(n):
+            for x, y in data.unbatch().take(nrows):
                 print(f'\nx: {x}')
                 print(f'y: {y}')        
 

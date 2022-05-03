@@ -56,7 +56,7 @@ class BioGrid(object):
         self.debug = debug
         self.verbose = verbose
 
-    def process(self):
+    def process(self, experiment=None):
         '''
         Process the raw biogrid data
         '''
@@ -84,7 +84,7 @@ class BioGrid(object):
 
         return ppi
 
-    def describe(self):
+    def describe(self, experiment=None):
         '''
         Describe the processed data. We will look at the total number of 
         interactions and the distribution of the number of interactions
@@ -186,7 +186,7 @@ class BioGrid(object):
             print(b_permilles)            
             
 
-    def validate(self, dataframe=None):
+    def validate(self, dataframe=None, experiment=None):
         '''
         Validates the dataframe. If no dataframe is passed then it loads 
         the processed dataframe as specified by the config
@@ -213,7 +213,7 @@ class BioGrid(object):
         return not any([ has_nas ]) # Return True is all checks pass            
         
 
-    def head(self, nrows=10):
+    def head(self, nrows=10, experiment=None):
         '''
         Display the top n rows of the processed biogrid dataset
         '''

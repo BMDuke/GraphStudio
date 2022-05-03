@@ -56,7 +56,7 @@ class MSig(object):
         self.debug = debug
         self.verbose = verbose # Can be disabled for unit testing
 
-    def process(self):
+    def process(self, experiment=None):
         '''
         Orchestrates the processing of the raw MSig data
         '''
@@ -73,7 +73,7 @@ class MSig(object):
 
         return df
 
-    def describe(self):
+    def describe(self, experiment=None):
         '''
         Print out a description of the processed data 
         '''
@@ -125,7 +125,7 @@ class MSig(object):
             else:
                 print('>> Learning is multiclass classification problem\n')
 
-    def validate(self, data=None):
+    def validate(self, data=None, experiment=None):
         '''
         Validate the processed data:
          - Print the result
@@ -154,7 +154,7 @@ class MSig(object):
 
         return not any([ has_nas ]) # Return True is all checks pass
 
-    def head(self, nrows=10):
+    def head(self, nrows=10, experiment=None):
         '''
         Print the top n rows of the dataset
         '''    

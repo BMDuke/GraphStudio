@@ -57,7 +57,7 @@ class TransitionProb(object):
         self.debug = debug
         self.verbose = verbose
     
-    def process(self):
+    def process(self, experiment=None):
         '''
         This function handles retrieving configuration values from 
         the config tool and checkng whether the required and target 
@@ -110,7 +110,7 @@ class TransitionProb(object):
 
         return n2v
     
-    def describe(self, n2v=None):
+    def describe(self, n2v=None, experiment=None):
         '''
         This calculates various metrics to decribe a processed node2vec
         instance that has been saved. It describes the config parameters
@@ -129,6 +129,8 @@ class TransitionProb(object):
 
         # Graph - Load nx graph and get details    
         if not n2v:
+            if self.verbose:
+                print('Loading node2vec graph...')
             n2v = self._load_n2v_graph()
         num_nodes = nx.number_of_nodes(n2v.graph)
         num_edges = nx.number_of_edges(n2v.graph)
@@ -168,7 +170,7 @@ class TransitionProb(object):
             print(os_details, '\n')
 
 
-    def validate(self, n2v=None):
+    def validate(self, n2v=None, experiment=None):
         '''
         This function runs some tests designed to validate the graph.
         It tests whether all first and second degree edges have been 
@@ -176,6 +178,8 @@ class TransitionProb(object):
         '''
         
         if not n2v:
+            if self.verbose:
+                print('Loading node2vec graph...')            
             n2v = self._load_n2v_graph()
 
         # Take a random sample from the nodes in the graph
@@ -216,7 +220,7 @@ class TransitionProb(object):
             
             
 
-    def head(self, n2v=None):
+    def head(self, nrows=5, n2v=None, experiment=None):
         '''
         This function attempts to provide standard 'head' functionality as is 
         comonly used with tabular data to the n2v graph. This isnt a perfect match
@@ -224,13 +228,14 @@ class TransitionProb(object):
         '''
 
         if not n2v:
+            if self.verbose:
+                print('Loading node2vec graph...')            
             n2v = self._load_n2v_graph()
 
         # Get first n edges
-        n = 5
         edges = []
 
-        for i in range(n): # Sample the edges
+        for i in range(nrows): # Sample the edges
             edge = self._sample_n2v_edge(n2v)
             edges.append(edge)
 
@@ -316,6 +321,7 @@ class TransitionProb(object):
         config = self.config
 
         config_values = config.show()
+
         current_version = config_values['data']['current']
 
         p = config_values['data']['experiments'][current_version]['p']
