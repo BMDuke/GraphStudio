@@ -9,10 +9,9 @@ import tqdm
 from prettytable import PrettyTable
 from bashplotlib.scatterplot import plot_scatter
 
-from source.utils.config import Config
-from source.utils.archive import Archive
+from source.etl.etl import ETL
 
-class BioGrid(object):
+class BioGrid(ETL):
     
     '''
     This class handles the file IO, data preprecessing, 
@@ -47,16 +46,18 @@ class BioGrid(object):
 
     chunksize=1000
 
-    def __init__(self, config, debug=False, verbose=True):
+    def __init__(self, debug=False, verbose=True):
         '''
         Config file is required to create a unique hash for the
         processed ppi filename - it depends on the biogrid version.
         '''
-        self.config = config
+
+        super().__init__()
+
         self.debug = debug
         self.verbose = verbose
 
-    def process(self, experiment=None):
+    def process(self, experiment='current'):
         '''
         Process the raw biogrid data
         '''
@@ -84,7 +85,7 @@ class BioGrid(object):
 
         return ppi
 
-    def describe(self, experiment=None):
+    def describe(self, experiment='current'):
         '''
         Describe the processed data. We will look at the total number of 
         interactions and the distribution of the number of interactions
@@ -186,7 +187,7 @@ class BioGrid(object):
             print(b_permilles)            
             
 
-    def validate(self, dataframe=None, experiment=None):
+    def validate(self, dataframe=None, experiment='current'):
         '''
         Validates the dataframe. If no dataframe is passed then it loads 
         the processed dataframe as specified by the config
@@ -213,7 +214,7 @@ class BioGrid(object):
         return not any([ has_nas ]) # Return True is all checks pass            
         
 
-    def head(self, nrows=10, experiment=None):
+    def head(self, nrows=10, experiment='current'):
         '''
         Display the top n rows of the processed biogrid dataset
         '''
@@ -270,9 +271,7 @@ class BioGrid(object):
         if not filepath:
 
             # Make unique ID
-            config = self.config
-            archive = Archive(config)
-            id = archive.make_id('biogrid', 'version')
+            id = self._make_uuid('biogrid')
 
             filename = f"{id}.csv"
             filepath = os.path.join(self.processed_dir, filename)
@@ -299,15 +298,11 @@ class BioGrid(object):
 
         if not filepath:
 
-            # Make unique ID 
-            config = self.config
-            archive = Archive(config)
-            id = archive.make_id('biogrid', 'version', add_to_lookup=add_to_lookup)
+            # Make unique ID
+            id = self._make_uuid('biogrid', add_to_lookup=add_to_lookup)
 
             filename = f"{id}.csv"
             filepath = os.path.join(self.processed_dir, filename)
-
-        
 
         if self.debug:
             filepath = self._make_test_filepath(filepath)
@@ -369,8 +364,7 @@ class BioGrid(object):
         return '.'.join(split_fp)        
      
 if __name__ == "__main__":
-    config = Config()
-    msig = BioGrid(config, debug=False)
+    msig = BioGrid(debug=False)
     # msig.process()
     # msig.head()
     msig.describe()

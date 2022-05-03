@@ -9,13 +9,12 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from prettytable import PrettyTable
 import numpy as np
 
-from source.utils.config import Config
-from source.utils.archive import Archive
 from source.utils.validation import validate_dataset_slower
 from source.etl.msig import MSig
+from source.etl.etl import ETL
 from source.datasets.multi_label import MultiLabelDataset
 
-class Vertices(object):
+class Vertices(ETL):
     
     '''
     This class is the ETL utility to generate the training data for the multi-
@@ -44,18 +43,20 @@ class Vertices(object):
     out_file = 'multilabelled_genes.tfrecord'
 
 
-    def __init__(self, config, debug=False, verbose=True):
+    def __init__(self, debug=False, verbose=True):
         '''
         Instantiate a new instance of the Vertices ETL tool. It takes a config 
         object as an argument which allows it to retrieve current project 
         parameter values.
         '''
-        self.config = config
+        
+        super().__init__()
+
         self.debug = debug
         self.verbose = verbose
 
 
-    def process(self, experiment=None):
+    def process(self, experiment='current'):
         '''
         This function reads in the labelled gene ids, which are output by the MSig class
         and transforms them into a tf Dataset where x is the gene id and y is a 
@@ -66,7 +67,7 @@ class Vertices(object):
             print('Creating multi-hot encoded dataset for multilabel classification...')
 
         # Create file paths
-        msig = MSig(self.config)
+        msig = MSig()
         msig_fp = msig._get_destination()
         vertices_fp = os.path.join(self.base_dir, 'vertices', self.out_file)
         
@@ -86,11 +87,10 @@ class Vertices(object):
         if self.verbose:
             print('Creating multi-hot encoded dataset for multilabel classification...')        
 
-        return data
-        
+        return data 
 
 
-    def describe(self, experiment=None):
+    def describe(self, experiment='current'):
         '''
         This fucntions provides a description and an example of the data asset that we
         are creating. The number of genes, labels annd number of labels per gene should
@@ -103,7 +103,7 @@ class Vertices(object):
         assert os.path.exists(vertices_fp), f'ERROR: Resource not found: {vertices_fp} \nHave you processed the multilabelled data?'        
 
         # Load the data
-        msig = MSig(self.config)
+        msig = MSig()
         pairs = msig._load_msig()        
         num_labels = len(msig._get_labels(pairs.values))
         multilabel = MultiLabelDataset(filepath=vertices_fp, num_labels=num_labels)
@@ -169,12 +169,9 @@ class Vertices(object):
             print(labels_table)
             print(f'\nDisk Utilisation Details:')
             print(disk_table)
-          
-        
 
 
-
-    def validate(self, experiment=None):
+    def validate(self, experiment='current'):
         '''
         Things to validate
         > Intengrity of crc        
@@ -200,10 +197,7 @@ class Vertices(object):
             print(f'\nNumber of corrupted TFRecords:')
             print(corruption_table)
 
-
-        
-
-    def head(self, nrows=5, experiment=None):
+    def head(self, nrows=5, experiment='current'):
         '''
         Print the first n examples from the dataset
         '''
@@ -214,7 +208,7 @@ class Vertices(object):
         assert os.path.exists(vertices_fp), f'ERROR: Resource not found: {vertices_fp} \nHave you processed the multilabelled data?'        
 
         # Load the data
-        msig = MSig(self.config)
+        msig = MSig()
         pairs = msig._load_msig()        
         num_labels = len(msig._get_labels(pairs.values))
         multilabel = MultiLabelDataset(filepath=vertices_fp, num_labels=num_labels)
@@ -232,10 +226,10 @@ class Vertices(object):
     
 
 if __name__ == "__main__":
-    conf = Config()
-    vertices = Vertices(conf)
+    # vertices = Vertices()
     # data = vertices.process()
     # vertices.describe()
     # vertices.validate()
-    vertices.head()
+    # vertices.head()
     # print(data)
+    pass

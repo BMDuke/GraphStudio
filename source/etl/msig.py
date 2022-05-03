@@ -3,7 +3,9 @@ import os
 import pandas as pd
 from prettytable import PrettyTable
 
-class MSig(object):
+from source.etl.etl import ETL
+
+class MSig(ETL):
 
     '''
     This class handles file IO, data exploration, data preprocessing
@@ -51,12 +53,14 @@ class MSig(object):
     HEADER1 = 'function'   
     HEADER2 = 'gene_id'   
 
-    def __init__(self, config=None, debug=False, verbose=True):
-        self.config = config # Include this for polymorphic interface
+    def __init__(self, debug=False, verbose=True):
+
+        super().__init__()
+        
         self.debug = debug
         self.verbose = verbose # Can be disabled for unit testing
 
-    def process(self, experiment=None):
+    def process(self, experiment='current'):
         '''
         Orchestrates the processing of the raw MSig data
         '''
@@ -73,7 +77,7 @@ class MSig(object):
 
         return df
 
-    def describe(self, experiment=None):
+    def describe(self, experiment='current'):
         '''
         Print out a description of the processed data 
         '''
@@ -125,7 +129,7 @@ class MSig(object):
             else:
                 print('>> Learning is multiclass classification problem\n')
 
-    def validate(self, data=None, experiment=None):
+    def validate(self, data=None, experiment='current'):
         '''
         Validate the processed data:
          - Print the result
@@ -154,7 +158,7 @@ class MSig(object):
 
         return not any([ has_nas ]) # Return True is all checks pass
 
-    def head(self, nrows=10, experiment=None):
+    def head(self, nrows=10, experiment='current'):
         '''
         Print the top n rows of the dataset
         '''    
@@ -305,12 +309,13 @@ class MSig(object):
 
 
 if __name__ == "__main__":
-    msig = MSig('config', debug=False)
+    # msig = MSig(debug=False)
     # gmt = msig.process()  # PASSED
     # print(gmt)    # PASSED
     # df = msig._load_msig()    # PASSED
     # print(df) # PASSED
-    msig.describe()   # PASSED
+    # msig.describe()   # PASSED
     # t = msig.validate()   # PASSED
     # print(t)    # PASSED
     # msig.head()
+    pass

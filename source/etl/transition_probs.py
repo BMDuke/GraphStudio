@@ -10,10 +10,9 @@ from prettytable import PrettyTable
 
 from source.graphs.n2v import Node2Vec
 from source.etl.biogrid import BioGrid
-from source.utils.config import Config
-from source.utils.archive import Archive
+from source.etl.etl import ETL
 
-class TransitionProb(object):
+class TransitionProb(ETL):
     
     '''
     This is a class that orchestrates calculating transition probabilities
@@ -47,17 +46,19 @@ class TransitionProb(object):
     graph_format = 'pickle'
 
 
-    def __init__(self, config, debug=False, verbose=True):
+    def __init__(self, debug=False, verbose=True):
         '''
         Config file is required to create an ID for the transition
         probabilities that are calculated. This depends on 
         the biogrid version, p and q. 
         '''
-        self.config = config
+        
+        super().__init__()
+
         self.debug = debug
         self.verbose = verbose
     
-    def process(self, experiment=None):
+    def process(self, experiment='current'):
         '''
         This function handles retrieving configuration values from 
         the config tool and checkng whether the required and target 
@@ -71,11 +72,11 @@ class TransitionProb(object):
 
         # Getting config values 
         biogrid_version = self._get_biogrid_version()
-        p, q = self._get_p_q_values()
+        p, q = self._get_p_q_values(experiment=experiment)
 
         # Load the config and get the current biogrid version
-        biogrid_id = self._make_uuid('biogrid')
-        transition_id = self._make_uuid('transition')
+        biogrid_id = self._make_uuid('biogrid', experiment=experiment)
+        transition_id = self._make_uuid('transition', experiment=experiment)
 
         # Check biogrid data exists
         biogrid_fp = os.path.join(self.source_dir, f"{biogrid_id}.csv")
@@ -90,7 +91,7 @@ class TransitionProb(object):
 
         if tps_exist:
             print(f'CONFLICT: Graph of biogrid version {biogrid_version} already exists for p: {p} q: {q}\n> {filename}')
-            return self._load_n2v_graph()
+            return self._load_n2v_graph(experiment)
 
         # Get the edge list
         edge_list = self._load_biogrid()
@@ -106,11 +107,11 @@ class TransitionProb(object):
         n2v.process_weights()
         
         # Save the results
-        self._save_n2v_graph(n2v)
+        self._save_n2v_graph(n2v, experiment)
 
         return n2v
     
-    def describe(self, n2v=None, experiment=None):
+    def describe(self, n2v=None, experiment='current'):
         '''
         This calculates various metrics to decribe a processed node2vec
         instance that has been saved. It describes the config parameters
@@ -120,7 +121,7 @@ class TransitionProb(object):
         
         # Config - Get details of the current config 
         biogid_version = self._get_biogrid_version()
-        p, q = self._get_p_q_values()
+        p, q = self._get_p_q_values(experiment=experiment)
 
         config_details = PrettyTable()
         conf_fieldnames = ['Biogrid version', 'p', 'q'] # Set title
@@ -131,7 +132,7 @@ class TransitionProb(object):
         if not n2v:
             if self.verbose:
                 print('Loading node2vec graph...')
-            n2v = self._load_n2v_graph()
+            n2v = self._load_n2v_graph(experiment)
         num_nodes = nx.number_of_nodes(n2v.graph)
         num_edges = nx.number_of_edges(n2v.graph)
         num_attr = nx.number_attracting_components(n2v.graph)
@@ -149,7 +150,7 @@ class TransitionProb(object):
         graph_details_2.add_row([num_attr, num_isol])  # Add row
 
         # OS - Get the filesize of the saved graph 
-        uuid = '.'.join([self._make_uuid('transition'), self.graph_format])
+        uuid = '.'.join([self._make_uuid('transition', experiment=experiment), self.graph_format])
         url = os.path.join(self.destination_dir, uuid)
         size = os.stat(url).st_size / 1024**3
 
@@ -170,7 +171,7 @@ class TransitionProb(object):
             print(os_details, '\n')
 
 
-    def validate(self, n2v=None, experiment=None):
+    def validate(self, n2v=None, experiment='current'):
         '''
         This function runs some tests designed to validate the graph.
         It tests whether all first and second degree edges have been 
@@ -180,7 +181,7 @@ class TransitionProb(object):
         if not n2v:
             if self.verbose:
                 print('Loading node2vec graph...')            
-            n2v = self._load_n2v_graph()
+            n2v = self._load_n2v_graph(experiment)
 
         # Take a random sample from the nodes in the graph
         nodes = random.sample(n2v.graph.nodes, 100)
@@ -220,7 +221,7 @@ class TransitionProb(object):
             
             
 
-    def head(self, nrows=5, n2v=None, experiment=None):
+    def head(self, nrows=5, n2v=None, experiment='current'):
         '''
         This function attempts to provide standard 'head' functionality as is 
         comonly used with tabular data to the n2v graph. This isnt a perfect match
@@ -230,7 +231,7 @@ class TransitionProb(object):
         if not n2v:
             if self.verbose:
                 print('Loading node2vec graph...')            
-            n2v = self._load_n2v_graph()
+            n2v = self._load_n2v_graph(experiment)
 
         # Get first n edges
         edges = []
@@ -264,15 +265,13 @@ class TransitionProb(object):
         lists and returns it to the caller. 
         '''
 
-        config = self.config
-
-        biogrid = BioGrid(config, verbose=False)
+        biogrid = BioGrid(verbose=False)
 
         data = biogrid._load_ppi().applymap(int) # _load_ppi returns pandas DF
 
         return data.values.tolist()
 
-    def _save_n2v_graph(self, n2v):
+    def _save_n2v_graph(self, n2v, experiment):
         '''
         Just a light wrapper to add some interactivity when saving
         the n2v graph. Writing to JSON can take a while
@@ -280,12 +279,12 @@ class TransitionProb(object):
         if self.verbose:
             print('Saving graph... ')
 
-        transition_id = self._make_uuid('transition', add_to_lookup=True)
+        transition_id = self._make_uuid('transition', experiment=experiment, add_to_lookup=True)
         destination = os.path.join(self.destination_dir, transition_id)
 
         n2v.save(destination, format=self.graph_format)
 
-    def _load_n2v_graph(self):
+    def _load_n2v_graph(self, experiment):
         '''
         Just a light wrapper to add some interactivity when saving
         the n2v graph. Writing to JSON can take a while
@@ -293,64 +292,13 @@ class TransitionProb(object):
         if self.verbose:
             print('Loading graph... ')        
 
-        transition_id = self._make_uuid('transition')
+        transition_id = self._make_uuid('transition', experiment=experiment)
         destination = os.path.join(self.destination_dir, transition_id)            
 
         n2v = Node2Vec()
         n2v.load(destination, format=self.graph_format)     
 
-        return n2v
-
-    def _get_biogrid_version(self):
-        '''
-        Handle the config utility and return the current biogrid version
-        '''   
-
-        config = self.config
-
-        config_values = config.show()
-        biogrid_version = config_values['data']['version']
-
-        return biogrid_version
-
-    def _get_p_q_values(self):
-        '''
-        Handle the config utility and return the current p, q values
-        '''
-
-        config = self.config
-
-        config_values = config.show()
-
-        current_version = config_values['data']['current']
-
-        p = config_values['data']['experiments'][current_version]['p']
-        q = config_values['data']['experiments'][current_version]['q']   
-
-        return p, q
-
-    def _make_uuid(self, resource, add_to_lookup=False):
-        '''
-        Handles config and archive managers to make uuids for 
-        biogrid and transition prob data assets. Based on currrent
-        config values.
-        Args:
-        resource:       (str) either "biogrid" or "transition"
-        add_to_lookup   (bool) Should this be added to the lookup.
-                        Used for write operations
-        '''
-
-        config = self.config
-        archive = Archive(config)
-
-        if resource == "biogrid":
-            uuid = archive.make_id('biogrid', 'version')
-        elif resource == 'transition':
-            uuid = archive.make_id('transition', 'version', 'p', 'q', add_to_lookup=add_to_lookup)
-        else:
-            raise ValueError(f"Resource unrecognised: {resource}. Options: ['biogrid', 'transition']")
-
-        return uuid            
+        return n2v    
 
     def _sample_n2v_edge(self, n2v):
         '''
@@ -396,8 +344,7 @@ class TransitionProb(object):
         return output
 
 if __name__ == "__main__":
-    config = Config()
-    tp = TransitionProb(config, debug=False)
+    tp = TransitionProb(debug=False)
     # n2v = tp.process()
     # tp.head(n2v)
     # tp.describe(n2v)

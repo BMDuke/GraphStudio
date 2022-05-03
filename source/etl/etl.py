@@ -46,7 +46,7 @@ class ETL(object):
         self.config = config
         self.data_archive = Archive(config)
 
-    def _get_biogrid_version(self):
+    def _get_biogrid_version(self, experiment='current'):
         '''
         This returns the version of the biogrid dataset
         specified in the config file.
@@ -167,17 +167,18 @@ class ETL(object):
 
 
 if __name__ == "__main__":
-    etl = ETL()
-    print(etl._get_biogrid_version())
-    print(etl._get_p_q_values())
-    print(etl._get_sampling_values())
-    print(etl._get_skipgram_values())
-    print(etl._dump_config())
-    print(etl._make_uuid('biogrid'))
-    print(etl._make_uuid('transition'))
-    print(etl._make_uuid('walk'))
-    print(etl._make_uuid('skipgram'))
-    print(etl._make_filepath('biogrid'))
-    print(etl._make_filepath('transition'))
-    print(etl._make_filepath('walk'))
-    print(etl._make_filepath('skipgram'))
+    # etl = ETL()
+    # print(etl._get_biogrid_version())
+    # print(etl._get_p_q_values())
+    # print(etl._get_sampling_values())
+    # print(etl._get_skipgram_values())
+    # print(etl._dump_config())
+    # print(etl._make_uuid('biogrid'))
+    # print(etl._make_uuid('transition'))
+    # print(etl._make_uuid('walk'))
+    # print(etl._make_uuid('skipgram'))
+    # print(etl._make_filepath('biogrid'))
+    # print(etl._make_filepath('transition'))
+    # print(etl._make_filepath('walk'))
+    # print(etl._make_filepath('skipgram'))
+    pass

@@ -11,11 +11,9 @@ import networkx as nx
 from prettytable import PrettyTable
 
 from source.graphs.n2v import Node2Vec
-from source.etl.biogrid import BioGrid
-from source.utils.config import Config
-from source.utils.archive import Archive
+from source.etl.etl import ETL
 
-class Walk(object):
+class Walk(ETL):
     
     '''
     This class is the ETL utility to generate the random walks in the 
@@ -51,17 +49,19 @@ class Walk(object):
     graph_format = 'pickle'
 
 
-    def __init__(self, config, debug=False, verbose=True):
+    def __init__(self, debug=False, verbose=True):
         '''
         Config file is required to create an ID for the transition
         probabilities that are calculated. This depends on 
         the biogrid version, p and q. 
         '''
-        self.config = config
+        
+        super().__init__()
+
         self.debug = debug
         self.verbose = verbose
     
-    def process(self):
+    def process(self, experiment='current'):
         '''
         This function checks the existance of the resource and any
         resources required to produce it. If the resource doesnt exist
@@ -69,17 +69,17 @@ class Walk(object):
         '''
 
         # Get current values from the config file
-        version = self._get_biogrid_version()
-        p, q = self._get_p_q_values()
-        num_walks, walk_length = self._get_sampling_values()
+        version = self._get_biogrid_version(experiment=experiment)
+        p, q = self._get_p_q_values(experiment=experiment)
+        num_walks, walk_length = self._get_sampling_values(experiment=experiment)
 
         # Make resource urls
-        transition_fp = self._make_filepath('transition')
-        walk_fp = self._make_filepath('walk')
+        transition_fp = self._make_filepath('transition', experiment=experiment)
+        walk_fp = self._make_filepath('walk', experiment=experiment)
 
         # Check if resource already exists
         if os.path.exists(walk_fp):
-            params = self._dump_config()
+            params = self._dump_config(experiment=experiment)
             print(f'\nCONFLICT: Resource already exists for:\n')
             for k, v in params:
                 print(f"{k:<26}{v}")
@@ -89,12 +89,12 @@ class Walk(object):
         assert os.path.exists(transition_fp), f'ERROR: Resource not found. Have you processed transition probabilities for:\nBiogrid: {version}\np: {p}\n: {q}'
         
         # Load the graph
-        n2v = self._load_n2v_graph()
+        n2v = self._load_n2v_graph(experiment=experiment)
         n2v.set(num_walks=num_walks, walk_length=walk_length)
 
         # Generate the walks
         directory = self.destination_dir
-        filename = self._make_uuid('walk', add_to_lookup=True)
+        filename = self._make_uuid('walk', experiment=experiment, add_to_lookup=True)
         path = os.path.join(directory, filename)
         try: 
 
@@ -108,7 +108,7 @@ class Walk(object):
             print(f'ERROR: {e}')
             raise 
 
-    def describe(self):
+    def describe(self, experiment='current'):
         ''' 
         things to do:
         - ✓ Data format: pd df
@@ -122,12 +122,12 @@ class Walk(object):
         '''
 
         # Make filepaths
-        filepath = self._make_filepath('walk')
+        filepath = self._make_filepath('walk', experiment=experiment)
 
         # Get config details
-        version = self._get_biogrid_version()
-        p, q = self._get_p_q_values()
-        num_walks, walk_length = self._get_sampling_values()
+        version = self._get_biogrid_version(experiment=experiment)
+        p, q = self._get_p_q_values(experiment=experiment)
+        num_walks, walk_length = self._get_sampling_values(experiment=experiment)
 
         # Check file exists
         filename = os.path.split(filepath)[1]
@@ -135,7 +135,7 @@ class Walk(object):
         assert os.path.exists(filepath), f'ERROR: Resource not found: {filename} - Have you generated the walks for biogrid version {version}, p {p}, q {q}, number of walks {num_walks}, walk length {walk_length}?'
 
         # Load walks
-        walks = self._load_walks()
+        walks = self._load_walks(experiment=experiment)
         
         # Get some info about the dataset
         shape = walks.shape
@@ -222,7 +222,7 @@ class Walk(object):
 
 
 
-    def validate(self):
+    def validate(self, experiment='current'):
         '''
         things to do:
         - Data format: pd df
@@ -232,12 +232,12 @@ class Walk(object):
         '''
 
         # Make filepaths
-        filepath = self._make_filepath('walk')
+        filepath = self._make_filepath('walk', experiment=experiment)
 
         # Get config details
-        version = self._get_biogrid_version()
-        p, q = self._get_p_q_values()
-        num_walks, walk_length = self._get_sampling_values()
+        version = self._get_biogrid_version(experiment=experiment)
+        p, q = self._get_p_q_values(experiment=experiment)
+        num_walks, walk_length = self._get_sampling_values(experiment=experiment)
 
         # Check file exists
         filename = os.path.split(filepath)[1]
@@ -245,7 +245,7 @@ class Walk(object):
         assert os.path.exists(filepath), f'ERROR: Resource not found: {filename} - Have you generated the walks for biogrid version {version}, p {p}, q {q}, number of walks {num_walks}, walk length {walk_length}?'
 
         # Load walks
-        walks = self._load_walks()        
+        walks = self._load_walks(experiment=experiment)        
         
         contains_nas = walks.isna().any().any()
 
@@ -265,7 +265,7 @@ class Walk(object):
             
             
 
-    def head(self):
+    def head(self, nrows=5, experiment='current'):
         '''
         things to do:
         - Data format: pd df
@@ -273,12 +273,12 @@ class Walk(object):
         '''
 
         # Make filepaths
-        filepath = self._make_filepath('walk')
+        filepath = self._make_filepath('walk', experiment=experiment)
 
         # Get config details
-        version = self._get_biogrid_version()
-        p, q = self._get_p_q_values()
-        num_walks, walk_length = self._get_sampling_values()
+        version = self._get_biogrid_version(experiment=experiment)
+        p, q = self._get_p_q_values(experiment=experiment)
+        num_walks, walk_length = self._get_sampling_values(experiment=experiment)
 
         # Check file exists
         filename = os.path.split(filepath)[1]
@@ -286,107 +286,14 @@ class Walk(object):
         assert os.path.exists(filepath), f'ERROR: Resource not found: {filename} - Have you generated the walks for biogrid version {version}, p {p}, q {q}, number of walks {num_walks}, walk length {walk_length}?'
 
         # Load walks
-        walks = self._load_walks()    
+        walks = self._load_walks(experiment=experiment)    
 
         if self.verbose:
-            print(walks.head())
+            print(walks.head(n=nrows))
+
         
 
-    def _get_biogrid_version(self):
-        '''
-        This handles loading the config file and extracts the 
-        current biogrid version 
-        '''
-        
-        config = self.config
-
-        config_values = config.show()
-        biogrid_version = config_values['data']['version']
-
-        return biogrid_version
-
-    def _get_p_q_values(self):
-        '''
-        Handle the config utility and return the current p, q values        
-        '''
-        config = self.config
-
-        config_values = config.show()
-        current_version = config_values['data']['current']
-
-        p = config_values['data']['experiments'][current_version]['p']
-        q = config_values['data']['experiments'][current_version]['q']   
-
-        return p, q
-
-    def _get_sampling_values(self):
-        '''
-        Handle the config utility and return the current values for
-        num_walks and walk_length        
-        '''
-        config = self.config
-
-        config_values = config.show()
-        current_version = config_values['data']['current']
-
-        num_walks = config_values['data']['experiments'][current_version]['num_walks']
-        walk_length = config_values['data']['experiments'][current_version]['walk_length'] 
-
-        return num_walks, walk_length
-
-    def _make_filepath(self, resource, ext=True):
-        '''
-        This makes returns the filepath for the requested resource.
-        resource:           (str) biogrid, transition or walk
-        '''
-        mapping = {
-            'biogrid': {
-                'dir': 'biogrid',
-                'extension': 'csv'
-            },
-            'transition': {
-                'dir': 'transition_probs',
-                'extension': self.graph_format
-            },
-            'walk': {
-                'dir': 'walks',
-                'extension': 'csv'
-            }
-        }
-
-        # Check exists
-        assert resource in mapping.keys(), f'ERROR: Requested resource not found {resource}. Either "biogrid", "transition" or "walk".'
-
-        # Make path to directory 
-        path = self.base_dir
-        path = os.path.join(path, mapping[resource]['dir'])
-
-        # Generate uuid
-        uuid = self._make_uuid(resource)
-
-        # Make filename
-        filename = uuid
-        if ext:
-            filename = f'{uuid}.{mapping[resource]["extension"]}'
-
-        return os.path.join(path, filename)
-        
-
-    def _dump_config(self):
-        '''
-        This returns a list keys and values from the config for data 
-        '''
-        
-        config = self.config
-
-        config_values = config.show()
-        current_version = config_values['data']['current']
-
-        dump = [[k, v] for k, v in config_values['data']['experiments'][current_version].items()]
-
-        return dump
-
-    def _load_n2v_graph(self):
+    def _load_n2v_graph(self, experiment='current'):
         '''
         Just a light wrapper to add some interactivity when saving
         the n2v graph. Writing to JSON can take a while
@@ -394,19 +301,19 @@ class Walk(object):
         if self.verbose:
             print('Loading graph... ')        
 
-        destination = self._make_filepath('transition', ext=False)           
+        destination = self._make_filepath('transition', experiment=experiment, ext=False)           
 
         n2v = Node2Vec(verbose=self.verbose)
         n2v.load(destination, format=self.graph_format)     
 
         return n2v
 
-    def _load_walks(self):
+    def _load_walks(self, experiment='current'):
         '''
         Load and return the walks dataset
         '''
 
-        filepath = self._make_filepath('walk')
+        filepath = self._make_filepath('walk', experiment=experiment)
 
         if self.verbose:
             print(f'\nLoading random walk dataset at \n{filepath}\n')
@@ -420,32 +327,7 @@ class Walk(object):
 
             print(f'ERROR in Walks._load_walks: {e}')
             raise        
-
-    def _make_uuid(self, resource, add_to_lookup=False):
-        '''
-        Handles config and archive managers to make uuids for 
-        biogrid and transition prob data assets. Based on currrent
-        config values.
-        Args:
-        resource:       (str) either "biogrid", "transition" or 
-                        "walk"
-        add_to_lookup   (bool) Should this be added to the lookup.
-                        Used for write operations
-        '''
-
-        config = self.config
-        archive = Archive(config)
-
-        if resource == "biogrid":
-            uuid = archive.make_id('biogrid', 'version')
-        elif resource == 'transition':
-            uuid = archive.make_id('transition', 'version', 'p', 'q')
-        elif resource == 'walk':
-            uuid = archive.make_id('walk', 'version', 'p', 'q', 'num_walks', 'walk_length', add_to_lookup=add_to_lookup)
-        else:
-            raise ValueError(f"Resource unrecognised: {resource}. Options: ['biogrid', 'transition']")
-
-        return uuid        
+    
 
 
                                                    
@@ -453,8 +335,7 @@ class Walk(object):
     
 
 if __name__ == "__main__":
-    config = Config()
-    walk = Walk(config, debug=False)
+    walk = Walk(debug=False)
     # sample = walk.process()
     # print(sample)
     # walk.describe()

@@ -4,7 +4,10 @@ import sys
 import yaml
 import pprint
 
+from prettytable import PrettyTable
+
 from source.utils.config import Config
+from source.utils.archive import Archive
 
 from source.etl.msig import MSig
 from source.etl.biogrid import BioGrid
@@ -21,7 +24,7 @@ Documentation:
 
 dataset_mapping = {
     'msig': MSig,
-    'biorgid': BioGrid,
+    'biogrid': BioGrid,
     'transition_probs': TransitionProb,
     'walks': Walk,
     'skipgrams': Skipgrams,
@@ -36,7 +39,7 @@ if __name__ == "__main__":
     pprinter = pprint.PrettyPrinter(indent=4)
     
     # Parse command line arguments
-    command = sys.argv[1]    
+    command = sys.argv[1]  
 
     if command == 'process':
 
@@ -48,13 +51,13 @@ if __name__ == "__main__":
 
         if arg == 'all':
 
-            print('ARG IS ALL')
+            # print('ARG IS ALL')
 
             args = arg.split('=')
             if len(args) == 2:
                 _, experiment = args
             else:
-                _, experiment = args[0], None
+                _, experiment = args[0], 'current'
 
             msig = MSig(config)
             biogrid = BioGrid(config)
@@ -72,18 +75,19 @@ if __name__ == "__main__":
 
         elif arg:
 
-            print('ARG IS DATASET ', arg)
+            # print('ARG IS DATASET ', arg)
             args = arg.split('=')
             if len(args) == 2:
                 dataset, experiment = args
             else:
-                dataset, experiment = args[0], None
+                dataset, experiment = args[0], 'current'
 
-            assert dataset in dataset_mapping.keys(), f'ERROR dataset \'{dataset}\' not recognised, please choose from {str(*list(dataset_mapping.keys()))}'
+            assert dataset in dataset_mapping.keys(), f'ERROR dataset \'{dataset}\' not recognised, please choose from {str(list(dataset_mapping.keys()))}'
 
             data = dataset_mapping[dataset]
+            data = data()
 
-            data.process(experiment)
+            data.process(experiment=experiment)
 
         else:
             raise 
@@ -96,18 +100,19 @@ if __name__ == "__main__":
             out = f'\nNo argument passed to describe. What dataset do you want to decribe? [dataset] | [dataset]=[experiment name] '
             raise ValueError(out)
 
-        print('ARG IS DATASET ', arg)
+        # print('ARG IS DATASET ', arg)
         args = arg.split('=')
         if len(args) == 2:
             dataset, experiment = args
         else:
-            dataset, experiment = args[0], None
+            dataset, experiment = args[0], 'current'
 
-        assert dataset in dataset_mapping.keys(), f'ERROR dataset \'{dataset}\' not recognised, please choose from {str(*list(dataset_mapping.keys()))}'
+        assert dataset in dataset_mapping.keys(), f'ERROR dataset \'{dataset}\' not recognised, please choose from {str(list(dataset_mapping.keys()))}'
 
         data = dataset_mapping[dataset]
+        data = data()
 
-        data.describe(experiment)
+        data.describe(experiment=experiment)
 
     elif command == 'validate':
         
@@ -117,18 +122,19 @@ if __name__ == "__main__":
             out = f'\nNo argument passed to validate. What dataset do you want to validate? [dataset] | [dataset]=[experiment name] '
             raise ValueError(out)
 
-        print('ARG IS DATASET ', arg)
+        # print('ARG IS DATASET ', arg)
         args = arg.split('=')
         if len(args) == 2:
             dataset, experiment = args
         else:
-            dataset, experiment = args[0], None
+            dataset, experiment = args[0], 'current'
         
-        assert dataset in dataset_mapping.keys(), f'ERROR dataset \'{dataset}\' not recognised, please choose from {str(*list(dataset_mapping.keys()))}'
+        assert dataset in dataset_mapping.keys(), f'ERROR dataset \'{dataset}\' not recognised, please choose from {str(list(dataset_mapping.keys()))}'
 
         data = dataset_mapping[dataset]
+        data = data()
 
-        data.validate(experiment)
+        data.validate(experiment=experiment)
 
 
     elif command == 'head':
@@ -139,23 +145,46 @@ if __name__ == "__main__":
             out = f'\nNo argument passed to head. What dataset do you want to view? [dataset] | [dataset]=[experiment name] '
             raise ValueError(out)
 
-        print('ARG IS DATASET ', arg)
+        # print('ARG IS DATASET ', arg)
         args = arg.split('=')
         if len(args) == 2:
             dataset, experiment = args
         else:
-            dataset, experiment = args[0], None
+            dataset, experiment = args[0], 'current'
 
-        assert dataset in dataset_mapping.keys(), f'ERROR dataset \'{dataset}\' not recognised, please choose from {str(*list(dataset_mapping.keys()))}'
+        assert dataset in dataset_mapping.keys(), f'ERROR dataset \'{dataset}\' not recognised, please choose from {str(list(dataset_mapping.keys()))}'
 
         data = dataset_mapping[dataset]
+        data = data()
 
-        data.head(experiment)
+        nrows=5
+        try:
+            arg =  sys.argv[3]   
+            nrows = int(arg.split('=')[1])
+            print(nrows)
+        except Exception as e:
+            pass    
+
+        data.head(experiment=experiment, nrows=nrows)
 
 
     elif command == 'ls':
 
-        pass
+        archive = Archive(Config())
+        lookup = archive._load_lookup()
+
+        # print(lookup.columns.values)
+        # print(lookup.index.stop)
+
+        table = PrettyTable()
+        table.field_names = lookup.columns.values
+        for i in range(lookup.index.stop):
+            # print(lookup.iloc[ i ].values)
+            table.add_row(lookup.iloc[ i ].values)
+        # table.add_row([size])  
+
+        print(table)
+        
 
     elif command == 'rm':
 
@@ -165,7 +194,7 @@ if __name__ == "__main__":
             out = f'\nNo argument passed to rm. What dataset do you want to delete? [dataset] | [dataset]=[experiment name] '
             raise ValueError(out)
 
-        print('ARG IS DATASET ', arg)
+        # print('ARG IS DATASET ', arg)
         args = arg.split('=')
         if len(args) == 2:
             dataset, experiment = args
