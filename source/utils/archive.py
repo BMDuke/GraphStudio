@@ -37,6 +37,9 @@ class Archive(object):
         '''
         Creates a hash ID based on parameter values. 
         Optionally adds it to the lookup table.
+
+        DEPRECIATED
+
         '''
         id = self._make_hash(*params)
 
@@ -57,6 +60,28 @@ class Archive(object):
             }
 
             self._add_to_lookup(id, type, params)
+        
+        return id
+
+    def make_id_from_dict(self, asset, values, add_to_lookup=False):
+        '''
+        A new and improved version of make_id which allows you to generate
+        ID's from parameter values directly.
+        
+        The alternative was passing parameter names and having the indirection
+        of making the archive look up those parameter values. It also 
+        allows you to make ID's for experiments other than the current ones
+        in the config file.
+        
+        This is paired with the new method ._make_hash_from_dict, verbose,
+        but avoid problems described above.
+        '''
+
+        id = self._make_hash_from_dict(asset, values)
+
+        if add_to_lookup:
+
+            self._add_to_lookup(id, asset, values)
         
         return id
 
@@ -203,6 +228,9 @@ class Archive(object):
         *params         These are the names of parameters
                         as strings. Example: 'version',
                         not 4.4.207, 'p', not 0.5
+        
+        DEPRECIATED
+
         '''
 
         config = self.config.show()
@@ -243,7 +271,51 @@ class Archive(object):
 
         return id              
 
+    def _make_hash_from_dict(self, asset, values):
+        '''
+        New and imporved version of make_hash method. Now, rather than
+        having to load the config file and extract the values, they are
+        simpley provided directly by the caller. 
+
+        values:             dict of parameter values
+
+        '''
         
+        # Initialise the hash
+        hash_master = hashlib.shake_128()
+        hash_length = self.hash_length   
+        b = lambda x: bytes(str(x), 'utf-8')
+
+        # Make byte values
+        version = b(values.get('version'))
+        p = b(values.get('p'))
+        q = b(values.get('q'))
+        walk_length = b(values.get('walk_length'))
+        num_walks = b(values.get('num_walks'))
+        window_size = b(values.get('window_size'))
+        negative_samples = b(values.get('negative_samples'))
+
+        # Make hash and return id
+        hash_master.update(version) # biogrid dataset
+        if asset == 'biogrid':
+            return hash_master.hexdigest(hash_length)
+        
+        hash_master.update(p) # transition probs dataset
+        hash_master.update(q)
+        if asset == 'transition':
+            return hash_master.hexdigest(hash_length)
+
+        hash_master.update(walk_length) # walks dataset
+        hash_master.update(num_walks) 
+        if asset == 'walk':
+            return hash_master.hexdigest(hash_length)        
+
+        hash_master.update(window_size) # skipgram dataset
+        hash_master.update(negative_samples) 
+        if asset == 'skipgram':
+            return hash_master.hexdigest(hash_length)     
+
+        raise ValueError(f'Dataset not recognised: {asset}. Please choose from biogrid | transition | walk | skipgram')         
 
     def _get_lookup_filepath(self):
         '''

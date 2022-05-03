@@ -8,6 +8,8 @@ from source.utils.archive import Archive, ModelArchive
 
 class Model(object):
     '''
+    This is a base class for machine learning models
+    
     Thinsg to include
     > Tensorboard: Add callback, view logs
     > checkpoint
@@ -33,16 +35,6 @@ class Model(object):
 
     def train(self):
         '''
-
-
-
-
-        Step 1: Parse config 
-        Step 2: Resolve dependencies
-        Step 3: Load assets
-        Step 4: Set up environment and models
-        Step 5: Train
-        Step 6: Save
         '''
     
     def test(self):
