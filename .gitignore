@@ -5,21 +5,21 @@
 *__pycache__*
 
 # All project cache files
-cache/networkx/*
-cache/tensorflow/*
+app/cache/networkx/*
+app/cache/tensorflow/*
 
 # All Downloaded and transformed data
-data/raw/*.txt
-data/raw/*.gmt
-data/processed/lookup.csv
-data/processed/biogrid/*
-data/processed/edges/*
-data/processed/gene_ids/*
-data/processed/skipgrams/*
-data/processed/transition_probs/*
-data/processed/vertices/*
-data/processed/walks/*
+app/data/raw/*.txt
+app/data/raw/*.gmt
+app/data/processed/lookup.csv
+app/data/processed/biogrid/*
+app/data/processed/edges/*
+app/data/processed/gene_ids/*
+app/data/processed/skipgrams/*
+app/data/processed/transition_probs/*
+app/data/processed/vertices/*
+app/data/processed/walks/*
 
 # All configuration files except templates
-conf/*
-!conf/__*__.yaml
+app/conf/*
+!app/conf/__*__.yaml
