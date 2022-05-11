@@ -98,7 +98,7 @@ class MultiLabelClassifier(Model):
         encoder = node2vec.model.get_layer(name='w2v_embedding') 
         
         # Calculate the number of labels in the dataset
-        msig = MSig(self.config)
+        msig = MSig()
         labelled_genes = msig._load_msig()
         num_labels = len(set([label for label, _ in labelled_genes.values]))
 

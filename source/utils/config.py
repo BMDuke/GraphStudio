@@ -112,7 +112,7 @@ class Config(object):
         
         else:
 
-            raise NameError(f"ERROR: Config {name} not found")
+            raise NameError(f"ERROR: Config \'{name}\' not found")
 
         return config
 

@@ -173,15 +173,11 @@ if __name__ == "__main__":
         archive = Archive(Config())
         lookup = archive._load_lookup()
 
-        # print(lookup.columns.values)
-        # print(lookup.index.stop)
 
         table = PrettyTable()
         table.field_names = lookup.columns.values
         for i in range(lookup.index.stop):
-            # print(lookup.iloc[ i ].values)
             table.add_row(lookup.iloc[ i ].values)
-        # table.add_row([size])  
 
         print(table)
         
