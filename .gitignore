@@ -5,20 +5,16 @@
 *__pycache__*
 
 # All project cache files
-app/cache/networkx/*
-app/cache/tensorflow/*
+app/cache/*/*
+!app/cache/*/.gitkeep
 
 # All Downloaded and transformed data
 app/data/raw/*.txt
 app/data/raw/*.gmt
-app/data/processed/lookup.csv
-app/data/processed/biogrid/*
-app/data/processed/edges/*
-app/data/processed/gene_ids/*
-app/data/processed/skipgrams/*
-app/data/processed/transition_probs/*
-app/data/processed/vertices/*
-app/data/processed/walks/*
+
+app/data/processed/*/*
+app/data/processed/*.*
+!app/data/processed/*/.gitkeep
 
 # All configuration files except templates
 app/conf/*

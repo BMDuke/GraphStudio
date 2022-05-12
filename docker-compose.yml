@@ -1,0 +1,43 @@
+version: "3.2"
+
+services:
+  graphstudio:
+    image: gs.test2:latest
+    volumes:
+
+      # Bind user defined models to container
+      - ./models/binaryClassifier:/graph-studio/source/models/binaryClassifier
+      - ./models/multiLabelClassifier:/graph-studio/source/models/multiLabelClassifier
+      - ./models/node2vec:/graph-studio/source/models/node2vec
+
+      # Bind data generated from container to project 
+      - ./app/cache:/graph-studio/cache
+      - ./app/conf:/graph-studio/conf
+      - ./app/data:/graph-studio/data      
+
+    # runtime: nvidia
+    deploy:
+
+      # Provision GPU for container
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  test: 
+    image: gs.test2:latest
+    command: nvidia-smi
+
+    deploy:
+
+      # Provision GPU for container
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  
