@@ -20,13 +20,17 @@ RUN pip3 install -r requirements.txt
 RUN mkdir graph-studio
 WORKDIR /graph-studio
 
-# Run the init script to initialize folder structure
-COPY app/source/setup_project.py /graph-studio/setup.py
-CMD ["python3", "setup.py"]
+COPY app/cache cache
+COPY app/conf conf
+COPY app/data data
+COPY app/source source
+COPY app/tests tests
 
-# Copy all source code into working directory
-
-# Copy user defined models into source/models/<model>
+# Define aliases for CLI
+RUN echo 'alias fetch="python3 -m source.cli.download"' >> ~/.bashrc
+RUN echo 'alias conf="python3 -m source.cli.config"' >> ~/.bashrc
+RUN echo 'alias etl="python3 -m source.cli.etl"' >> ~/.bashrc
+RUN echo 'alias train="python3 -m source.cli.train"' >> ~/.bashrc
 
 
 ### Recources
