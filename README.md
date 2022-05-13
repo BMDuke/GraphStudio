@@ -256,7 +256,7 @@ Now we are ready to train the model.
 ### Training a model
 All the hard work has now been done, we are now ready to train the model. This is simply done with the command
 ```
-train node2vec
+train train node2vec
 ```
 After training, the model is saved along with its weights and checkpoints. Like the data assets, it is saved under a UUID which is generated based on the parameters of the data it is trained on, the architecture used and training conditions used. To have a look at what models have been trained and the parameters that were used to train them
 ```
