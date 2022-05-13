@@ -1,8 +1,10 @@
 version: "3.2"
 
 services:
+
+  # Project image
   graphstudio:
-    image: gs.test2:latest
+    image: graphstudio:latest
     volumes:
 
       # Bind user defined models to container
@@ -26,7 +28,8 @@ services:
               count: all
               capabilities: [gpu]
 
-  test: 
+  # GPU test image
+  test-nvidia: 
     image: gs.test2:latest
     command: nvidia-smi
 

@@ -403,7 +403,7 @@ class Config(object):
 
             try:
                 return ast.literal_eval(inp)    # convert to numeric type    
-            except ValueError:
+            except Exception as e:
                 return inp
 
 
