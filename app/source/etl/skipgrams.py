@@ -100,7 +100,7 @@ class Skipgrams(ETL):
 
         try: 
 
-            skipgrams = TextDataset(walk_fp, skipgram_fp, verbose=self.verbose)
+            skipgrams = TextDataset(walk_fp, skipgram_fp, verbose=self.verbose, negative_samples=negative_samples)
             skipgrams.create_skipgram_dataset(window_size=window_size, negative_samples=negative_samples)
 
             return skipgrams.data()
