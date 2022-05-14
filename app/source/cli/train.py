@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
         table = PrettyTable()
         table.field_names = lookup.columns.values
-        for i in range(lookup.index.stop):
+        for i in range(lookup.index.size):
             table.add_row(lookup.iloc[ i ].values)
 
         print(table)
